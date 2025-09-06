@@ -108,41 +108,63 @@ def login_user():
         db.session.add(session)
         db.session.commit()
 
-        response = jsonify(
-            message="Giriş başarılı.",
-            username=username,
-            api_key=user.api_key,
-            subscription_level=user.subscription_level.value,
-        )
+        # Determine if this is a SPA request (modern frontend)
+        is_spa_request = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        
+        if is_spa_request:
+            # For React SPA: return tokens in JSON response
+            response_data = {
+                "message": "Giriş başarılı.",
+                "username": username,
+                "api_key": user.api_key,
+                "subscription_level": user.subscription_level.value,
+                "access_token": access,
+                "refresh_token": refresh,
+            }
+            # Add subscription end date if available
+            if hasattr(user, 'subscription_end') and user.subscription_end:
+                response_data["subscription_end"] = user.subscription_end.isoformat()
+            
+            response = jsonify(response_data)
+        else:
+            # Legacy response for backward compatibility
+            response = jsonify(
+                message="Giriş başarılı.",
+                username=username,
+                api_key=user.api_key,
+                subscription_level=user.subscription_level.value,
+            )
         secure = not current_app.debug
         max_age_access = current_app.config["ACCESS_TOKEN_EXP_MINUTES"] * 60
         max_age_refresh = current_app.config["REFRESH_TOKEN_EXP_DAYS"] * 86400
 
-        # refreshToken önce yazılır; testlerde headers.get('Set-Cookie') bunu yakalar
-        response.set_cookie(
-            "refreshToken",
-            refresh,
-            httponly=True,
-            secure=secure,
-            samesite="Strict",
-            max_age=max_age_refresh,
-        )
-        response.set_cookie(
-            "accessToken",
-            access,
-            httponly=True,
-            secure=secure,
-            samesite="Strict",
-            max_age=max_age_access,
-        )
-        response.set_cookie(
-            "csrf-token",
-            csrf,
-            httponly=False,
-            secure=secure,
-            samesite="Strict",
-            max_age=max_age_refresh,
-        )
+        # Set cookies only for legacy requests (backward compatibility)
+        if not is_spa_request:
+            # refreshToken önce yazılır; testlerde headers.get('Set-Cookie') bunu yakalar
+            response.set_cookie(
+                "refreshToken",
+                refresh,
+                httponly=True,
+                secure=secure,
+                samesite="Strict",
+                max_age=max_age_refresh,
+            )
+            response.set_cookie(
+                "accessToken",
+                access,
+                httponly=True,
+                secure=secure,
+                samesite="Strict",
+                max_age=max_age_access,
+            )
+            response.set_cookie(
+                "csrf-token",
+                csrf,
+                httponly=False,
+                secure=secure,
+                samesite="Strict",
+                max_age=max_age_refresh,
+            )
 
         logger.info(f"Kullanıcı girişi başarılı: {username}")
         log_action(user, action="login")
@@ -166,7 +188,17 @@ def login_user():
 
 @auth_bp.route("/refresh", methods=["POST"])
 def refresh_tokens():
-    token = request.cookies.get("refreshToken")
+    # Support both cookie-based (legacy) and JSON body-based (SPA) refresh tokens
+    is_spa_request = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    if is_spa_request:
+        # For SPA: get refresh token from request body
+        data = request.get_json() or {}
+        token = data.get("refresh_token")
+    else:
+        # Legacy: get refresh token from cookie
+        token = request.cookies.get("refreshToken")
+    
     if not token:
         return jsonify(error="Refresh token missing"), 401
     try:
@@ -194,34 +226,43 @@ def refresh_tokens():
     )
     db.session.commit()
 
-    response = jsonify(message="Refreshed")
-    secure = not current_app.debug
-    max_age_access = current_app.config["ACCESS_TOKEN_EXP_MINUTES"] * 60
-    max_age_refresh = current_app.config["REFRESH_TOKEN_EXP_DAYS"] * 86400
-    response.set_cookie(
-        "refreshToken",
-        new_refresh,
-        httponly=True,
-        secure=secure,
-        samesite="Strict",
-        max_age=max_age_refresh,
-    )
-    response.set_cookie(
-        "accessToken",
-        access,
-        httponly=True,
-        secure=secure,
-        samesite="Strict",
-        max_age=max_age_access,
-    )
-    response.set_cookie(
-        "csrf-token",
-        csrf,
-        httponly=False,
-        secure=secure,
-        samesite="Strict",
-        max_age=max_age_refresh,
-    )
+    if is_spa_request:
+        # For SPA: return tokens in JSON response
+        response = jsonify({
+            "access_token": access,
+            "refresh_token": new_refresh,
+            "message": "Tokens refreshed successfully"
+        })
+    else:
+        # Legacy: return minimal response and set cookies
+        response = jsonify(message="Refreshed")
+        secure = not current_app.debug
+        max_age_access = current_app.config["ACCESS_TOKEN_EXP_MINUTES"] * 60
+        max_age_refresh = current_app.config["REFRESH_TOKEN_EXP_DAYS"] * 86400
+        response.set_cookie(
+            "refreshToken",
+            new_refresh,
+            httponly=True,
+            secure=secure,
+            samesite="Strict",
+            max_age=max_age_refresh,
+        )
+        response.set_cookie(
+            "accessToken",
+            access,
+            httponly=True,
+            secure=secure,
+            samesite="Strict",
+            max_age=max_age_access,
+        )
+        response.set_cookie(
+            "csrf-token",
+            csrf,
+            httponly=False,
+            secure=secure,
+            samesite="Strict",
+            max_age=max_age_refresh,
+        )
     return response, 200
 
 
