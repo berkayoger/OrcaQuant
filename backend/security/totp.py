@@ -1,7 +1,7 @@
 import pyotp
 
 
-def generate_totp_uri(username: str, secret: str, issuer="YTD Crypto") -> str:
+def generate_totp_uri(username: str, secret: str, issuer="OrcaQuant") -> str:
     return pyotp.totp.TOTP(secret).provisioning_uri(name=username, issuer_name=issuer)
 
 

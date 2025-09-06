@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""YTD-Kopya Code Quality Quick Start."""
+"""OrcaQuant Code Quality Quick Start."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ class CodeQualitySetup:
         missing = [f for f in required_files if not (self.project_root / f).exists()]
         if missing:
             print(f"❌ Missing required files/directories: {missing}")
-            print("Please run this script from the YTD-Kopya project root.")
+            print("Please run this script from the OrcaQuant project root.")
             return False
         print("✅ Project structure verified")
         return True
@@ -198,7 +198,7 @@ repos:
 .PHONY: help install install-dev format lint type-check test clean
 
 help:
-@echo "YTD-Kopya Development Commands"
+@echo "OrcaQuant Development Commands"
 @echo "=============================="
 @echo "install-dev     - Install development dependencies"
 @echo "format          - Format code with black and isort"
@@ -365,7 +365,7 @@ rm -rf .coverage htmlcov/ .pytest_cache/ .mypy_cache/
 def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="YTD-Kopya Code Quality Setup",
+        description="OrcaQuant Code Quality Setup",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

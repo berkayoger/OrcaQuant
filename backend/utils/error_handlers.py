@@ -1,4 +1,4 @@
-"""Enhanced error handling utilities for YTD-Kopya"""
+"""Enhanced error handling utilities for OrcaQuant"""
 
 from flask import jsonify, g
 from werkzeug.exceptions import HTTPException

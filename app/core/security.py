@@ -283,7 +283,7 @@ def generate_totp_secret() -> str:
 
 
 def get_totp_uri(email: str, secret: str) -> str:
-    issuer = os.getenv("TOTP_ISSUER_NAME", "YTD-Crypto")
+    issuer = os.getenv("TOTP_ISSUER_NAME", "OrcaQuant")
     return pyotp.TOTP(secret).provisioning_uri(name=email, issuer_name=issuer)
 
 

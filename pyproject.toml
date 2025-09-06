@@ -1,7 +1,7 @@
 [project]
-name = "ytd-kopya"
+name = "orcaquant"
 version = "0.0.0"
-description = "YTD Crypto backend"
+description = "OrcaQuant backend"
 requires-python = ">=3.10"
 readme = "README.md"
 authors = [{name = "Berkay Oger"}]

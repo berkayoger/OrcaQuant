@@ -37,7 +37,7 @@ except Exception:
 
 @click.group()
 def cli():
-    """YTD-Kopya management commands"""
+    """OrcaQuant management commands"""
     pass
 
 

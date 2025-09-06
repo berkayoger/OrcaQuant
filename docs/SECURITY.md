@@ -1,4 +1,4 @@
-# YTD-Kopya Security Implementation Guide
+# OrcaQuant Security Implementation Guide
 
 Bu doküman, projedeki güvenlik özelliklerini ve kullanımını açıklar.
 
@@ -94,4 +94,3 @@ await fetch('/protected/action', {
 - `GET /auth/csrf-token` - CSRF token al
 - `POST /auth/csrf-validate` - CSRF token test et
 - `GET /api/v1/ping` - API sağlık kontrolü
-

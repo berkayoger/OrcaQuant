@@ -35,8 +35,8 @@ class TokenManager:
         base_payload = {
             "user_id": user_id,
             "iat": now,
-            "iss": "ytd-crypto-app",
-            "aud": "ytd-crypto-users",
+            "iss": "orcaquant-app",
+            "aud": "orcaquant-users",
         }
 
         if additional_claims:
@@ -85,8 +85,8 @@ class TokenManager:
                     "JWT_SECRET_KEY", current_app.config.get("SECRET_KEY")
                 ),
                 algorithms=["HS256"],
-                audience="ytd-crypto-users",
-                issuer="ytd-crypto-app",
+                audience="orcaquant-users",
+                issuer="orcaquant-app",
             )
 
             if payload.get("type") != token_type:

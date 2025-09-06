@@ -1,6 +1,6 @@
 /**
  * Authentication API calls with CSRF protection
- * YTD-Kopya Frontend Authentication Module
+ * OrcaQuant Frontend Authentication Module
  */
 
 import { secureRequest, securityManager } from './security';

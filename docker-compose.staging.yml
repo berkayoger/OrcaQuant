@@ -1,4 +1,4 @@
-name: ytd-kopya-staging
+name: orcaquant-staging
 services:
   reverse-proxy:
     image: caddy:2.8

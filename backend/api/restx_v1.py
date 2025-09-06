@@ -5,7 +5,7 @@ from flask_restx import Api, Namespace, Resource
 
 
 def create_v1_blueprint(
-    base_url: str = "/api/v1", title: str = "YTD-Kopya API", version: str = "1.0.0"
+    base_url: str = "/api/v1", title: str = "OrcaQuant API", version: str = "1.0.0"
 ) -> tuple[Blueprint, Api]:
     """Create a RESTX-powered API v1 blueprint with minimal health/doc routes."""
     bp = Blueprint("api_v1", __name__, url_prefix=base_url)
@@ -22,8 +22,7 @@ def create_v1_blueprint(
     @ns_health.route("")
     class Health(Resource):
         def get(self):  # noqa: D401
-            return {"status": "healthy", "service": "ytd-kopya-api"}, 200
+            return {"status": "healthy", "service": "orcaquant-api"}, 200
 
     api.add_namespace(ns_health)
     return bp, api
-

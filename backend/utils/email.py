@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 def send_password_reset_email(to_email: str, token: str) -> None:
     """Send password reset link via email."""
     reset_url = f"https://yourdomain.com/reset-password?token={token}"
-    subject = "YTD Crypto - Şifre Sıfırlama"
+    subject = "OrcaQuant - Şifre Sıfırlama"
     body = (
         "Merhaba,\n\n"
         "Şifrenizi sıfırlamak için aşağıdaki bağlantıya tıklayın:\n"
@@ -14,7 +14,7 @@ def send_password_reset_email(to_email: str, token: str) -> None:
     )
     msg = MIMEText(body)
     msg["Subject"] = subject
-    msg["From"] = "noreply@ytdcrypto.com"
+    msg["From"] = "noreply@orcaquant.com"
     msg["To"] = to_email
 
     with smtplib.SMTP("smtp.yourmail.com", 587) as server:

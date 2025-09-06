@@ -147,15 +147,15 @@ jobs:
     needs: [test_backend]
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t ytd-kopya:ci -f backend/Dockerfile .
+      - run: docker build -t orcaquant:ci -f backend/Dockerfile .
       - name: Smoke health
         run: |
           set -e
-          docker run -d -p 5000:5000 --name ytd-ci ytd-kopya:ci
+          docker run -d -p 5000:5000 --name orcaquant-ci orcaquant:ci
           for i in {1..30}; do
             sleep 2
             curl -fsS http://127.0.0.1:5000/health && exit 0 || true
           done
           echo "Service did not become healthy"
-          docker logs ytd-ci
+          docker logs orcaquant-ci
           exit 1

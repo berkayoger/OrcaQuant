@@ -1,6 +1,6 @@
 /**
  * Security utilities for CSRF protection and secure API calls
- * YTD-Kopya Frontend Security Module
+ * OrcaQuant Frontend Security Module
  */
 
 class SecurityManager {

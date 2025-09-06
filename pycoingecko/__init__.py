@@ -41,7 +41,7 @@ except Exception:  # pragma: no cover - küçük HTTP şimi devreye girer
                 )
                 url = f"{url}?{qs}"
             req = urllib.request.Request(
-                url, headers={"User-Agent": "ytd-kopya/pycoingecko-shim"}
+                url, headers={"User-Agent": "orcaquant/pycoingecko-shim"}
             )
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 data = resp.read()

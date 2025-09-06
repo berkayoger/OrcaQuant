@@ -70,7 +70,7 @@ frontend/.env
 frontend/.env.*
 !frontend/.env.example
 .env
-ytd-kopya.git/
+orcaquant.git/
 .venv/
 venv/
 instance/

@@ -174,8 +174,8 @@ def refresh_tokens():
             token,
             current_app.config.get("JWT_SECRET_KEY", "fallback-secret"),
             algorithms=["HS256"],
-            issuer="ytd-crypto-app",
-            audience="ytd-crypto-users",
+            issuer="orcaquant-app",
+            audience="orcaquant-users",
         )
         user_id = int(payload.get("user_id"))
     except jwt.PyJWTError:

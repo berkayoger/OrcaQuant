@@ -1,4 +1,4 @@
-# YTD-Kopya
+# OrcaQuant
 
 > **Security-hardening aktif**  
 > Prod/staging kurulumunda WSGI entrypoint olarak **`app.secure_app:app`** kullanın. Bu sarmalayıcı mevcut Flask uygulamasını otomatik bulur ve:
@@ -422,5 +422,4 @@ bakabilirsiniz.
 yönetilir. Yerel geliştirmede gerekli değerler `.env` dosyalarına yazılır; bu
 dosyalar depoya eklenmez ve `.gitignore` tarafından korunur. Örnek
 konfigürasyonlar için `*.env.example` dosyalarına bakabilirsiniz.
-
 

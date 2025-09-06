@@ -1,4 +1,4 @@
-// YTD Crypto Analysis API Client
+// OrcaQuant Analysis API Client
 class YTDApiClient {
   constructor() {
     // Ortam bazlı API base; yoksa /api
@@ -218,4 +218,3 @@ class YTDApiClient {
 
 // Singleton export
 window.ytdApi = new YTDApiClient();
-

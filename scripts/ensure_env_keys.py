@@ -28,7 +28,7 @@ REQUIRED_KEYS = {
     "JWT_KEY_VERSION": "1",
     "JWT_ROTATION_INTERVAL_DAYS": "30",
     "CSRF_SECRET": "change-this-long-random-string",
-    "TOTP_ISSUER_NAME": "YTD-Crypto",
+    "TOTP_ISSUER_NAME": "OrcaQuant",
     "EMAIL_FROM": "noreply@example.com",
     # DB/Redis (önceden varsa dokunulmaz)
     "DATABASE_SSL_MODE": "require",

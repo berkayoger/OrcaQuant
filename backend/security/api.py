@@ -24,7 +24,7 @@ def api_ping():
     """Health check for API endpoints."""
     return {
         "ok": True,
-        "service": "ytd-kopya-api",
+        "service": "orcaquant-api",
         "version": "1.0",
         "timestamp": datetime.utcnow().isoformat() + "Z",
     }

@@ -1,5 +1,5 @@
 """
-Pydantic-based configuration management for YTD-Kopya.
+Pydantic-based configuration management for OrcaQuant.
 
 This module provides type-safe, validated configuration management
 with support for multiple environments and secret management.
@@ -210,7 +210,7 @@ class Settings(BaseSettings):
     testing: bool = Field(default=False)
 
     # Application metadata
-    app_name: str = Field(default="YTD-Kopya")
+    app_name: str = Field(default="OrcaQuant")
     app_version: str = Field(default="1.0.0")
     api_prefix: str = Field(default="/api/v1")
 

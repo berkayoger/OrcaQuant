@@ -93,7 +93,7 @@ def check_dependencies() -> List[str]:
 
 def main() -> int:
     """Run all security checks and print results."""
-    print("🔐 YTD Crypto Application Security Check")
+    print("🔐 OrcaQuant Application Security Check")
     print("=" * 50)
 
     issues = check_env_security()

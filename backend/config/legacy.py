@@ -25,7 +25,7 @@ class BaseConfig:
     }
     READ_REPLICA_DATABASE_URI = os.getenv("READ_REPLICA_DATABASE_URI", "")
     # === API Versioning ===
-    API_TITLE = os.getenv("API_TITLE", "YTD-Kopya Crypto Analysis API")
+    API_TITLE = os.getenv("API_TITLE", "OrcaQuant Crypto Analysis API")
     API_VERSION = os.getenv("API_VERSION", "1.0.0")
     API_BASE_PREFIX = os.getenv("API_BASE_PREFIX", "/api/v1")
     API_DOCS_URL = os.getenv("API_DOCS_URL", "/docs")

@@ -113,7 +113,7 @@ def _create_v1_api(app: Flask):
     api = Api(
         api_bp_v1,
         version=app.config.get("API_VERSION", "1.0.0"),
-        title=app.config.get("API_TITLE", "YTD-Kopya Crypto Analysis API"),
+        title=app.config.get("API_TITLE", "OrcaQuant Crypto Analysis API"),
         doc=app.config.get("API_DOCS_URL", "/docs"),
         description="Cryptocurrency Analysis API"
     )
@@ -125,7 +125,7 @@ def _create_v1_api(app: Flask):
     class Health(Resource):
         def get(self):
             """Health check endpoint"""
-            return {"status": "healthy", "service": "ytd-kopya-api"}, 200
+            return {"status": "healthy", "service": "orcaquant-api"}, 200
 
     api.add_namespace(ns_health)
 
@@ -144,7 +144,7 @@ def _create_v1_api(app: Flask):
         <!DOCTYPE html>
         <html>
         <head>
-            <title>YTD-Kopya API Documentation</title>
+            <title>OrcaQuant API Documentation</title>
             <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css" />
         </head>
         <body>
@@ -279,7 +279,7 @@ def create_app(config_name: str = None) -> Flask:
         from backend.api.restx_v1 import create_v1_blueprint
 
         base = os.getenv("API_BASE_PREFIX", "/api/v1")
-        title = os.getenv("API_TITLE", "YTD-Kopya Crypto Analysis API")
+        title = os.getenv("API_TITLE", "OrcaQuant Crypto Analysis API")
         version = os.getenv("API_VERSION", "1.0.0")
         v1_bp, _ = create_v1_blueprint(base_url=base, title=title, version=version)
         if v1_bp:

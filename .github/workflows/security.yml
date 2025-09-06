@@ -45,10 +45,10 @@ jobs:
     needs: deps_and_static
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t ytd-kopya:scan -f backend/Dockerfile .
+      - run: docker build -t orcaquant:scan -f backend/Dockerfile .
       - uses: aquasecurity/trivy-action@0.24.0
         with:
-          image-ref: ytd-kopya:scan
+          image-ref: orcaquant:scan
           severity: CRITICAL,HIGH
           exit-code: '1'
 

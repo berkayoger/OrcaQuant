@@ -225,7 +225,7 @@ def create_app(config_object: str | None = None) -> Flask:
         from backend.api.restx_v1 import create_v1_blueprint
 
         base = os.getenv("API_BASE_PREFIX", "/api/v1")
-        title = os.getenv("API_TITLE", "YTD-Kopya Crypto Analysis API")
+        title = os.getenv("API_TITLE", "OrcaQuant Crypto Analysis API")
         version = os.getenv("API_VERSION", "1.0.0")
         v1_bp, _ = create_v1_blueprint(base_url=base, title=title, version=version)
         app.register_blueprint(v1_bp)

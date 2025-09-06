@@ -4,7 +4,7 @@
 ```bash
 sudo apt-get update && sudo apt-get install -y docker.io docker-compose-plugin
 sudo usermod -aG docker $USER
-mkdir -p ~/apps/ytd-kopya && cd ~/apps/ytd-kopya
+mkdir -p ~/apps/orcaquant && cd ~/apps/orcaquant
 # Repo bu dizine klonlanmalı (secrets.STAGING_PROJECT_DIR burayı göstermeli)
 # .env.staging dosyasını oluştur:
 cp .env.example .env.staging
@@ -15,7 +15,7 @@ cp .env.example .env.staging
 - `STAGING_SSH_HOST`
 - `STAGING_SSH_USER`
 - `STAGING_SSH_KEY` (private key)
-- `STAGING_PROJECT_DIR` (örn: `/home/ubuntu/apps/ytd-kopya`)
+- `STAGING_PROJECT_DIR` (örn: `/home/ubuntu/apps/orcaquant`)
 
 ## 3) Çalışma Mantığı
 - Push → `main` → test → iki imaj build → GHCR push → SSH ile sunucuda
