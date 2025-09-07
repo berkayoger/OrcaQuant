@@ -13,18 +13,29 @@ services:
       - postgres
     volumes:
       - ./backend:/app
+      - ./frontend:/frontend
+      - ml_artifacts:/app/storage
     environment:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-generate-secure-key-for-production}
       - JWT_ACCESS_TOKEN_EXPIRES_MINUTES=${JWT_ACCESS_TOKEN_EXPIRES_MINUTES:-15}
       - JWT_REFRESH_TOKEN_EXPIRES_DAYS=${JWT_REFRESH_TOKEN_EXPIRES_DAYS:-7}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - BCRYPT_LOG_ROUNDS=${BCRYPT_LOG_ROUNDS:-12}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - FLASK_ENV=production
+      - ML_MODEL_NAME=oq_return
+      - ML_HORIZON_DAYS=7
+      - ML_ARTIFACT_DIR=/app/storage/models
+      - ML_CACHE_DIR=/app/storage/ml_cache
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:5000/health || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 20s
+    command: ["gunicorn", "--worker-class", "eventlet", "-w", "1", "--bind", "0.0.0.0:5000", "wsgi:app"]
 
   redis:
     image: redis:7-alpine
@@ -33,7 +44,16 @@ services:
     volumes:
       - redis_data:/data
     command: >
-      sh -c "if [ -n '$REDIS_PASSWORD' ]; then\n        redis-server --requirepass $REDIS_PASSWORD;\n      else\n        redis-server;\n      fi"
+      sh -c "if [ -n '$REDIS_PASSWORD' ]; then
+        redis-server --requirepass $REDIS_PASSWORD --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru;
+      else
+        redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru;
+      fi"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:15-alpine
@@ -45,6 +65,17 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  # --- Opsiyonel: MLflow Tracking Server (lokalde model versiyonlama için) ---
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    command: mlflow server --host 0.0.0.0 --port 5001 --backend-store-uri sqlite:///mlflow.db --default-artifact-root /mlart
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlart
+      - mlflow_db:/mlruns
+    restart: unless-stopped
 
   token-cleanup:
     build: ./backend
@@ -59,3 +90,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  ml_artifacts:
+  mlflow_data:
+  mlflow_db:

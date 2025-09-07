@@ -14,7 +14,9 @@ from flask import Blueprint
 # Örneğin, projenizin kök dizininde bir 'frontend/build' klasörü varsa,
 # yollar '../frontend/build/static' gibi göreceli olabilir.
 frontend_bp = Blueprint(
-    "frontend", __name__, template_folder="build", static_folder="build/static"
+    "frontend", __name__, 
+    template_folder="../../frontend/templates", 
+    static_folder="../../frontend/static"
 )
 
 # Bu Blueprint'e bağlı route'ları import ediyoruz.

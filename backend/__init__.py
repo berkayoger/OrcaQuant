@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from datetime import datetime
 from flask import Flask
 from flask_cors import CORS
 from flask_limiter import Limiter
@@ -16,6 +17,11 @@ from .utils.logging_setup import setup_logging, setup_json_logging, with_request
 from .utils.error_handlers import register_error_handlers as register_enhanced_error_handlers
 from .utils.cache import init_l1_cache_from_config
 from .db import db as db
+
+# WebSocket imports
+from .websocket.socket_manager import websocket_manager
+from .core.redis_manager import redis_manager
+from .utils.price_streamer import PriceStreamManager
 
 # Import enhanced dependencies with graceful fallback
 # Note: Avoid importing sentry at module import time to prevent eventlet/ssl issues during tests.
@@ -39,6 +45,7 @@ logger = logging.getLogger(__name__)
 # Global service instance
 security_service: SecurityOptimizationService = None
 socketio = None
+price_stream_manager = None
 
 # Global cache instance
 cache: Cache | None = None
@@ -238,6 +245,30 @@ def create_app(config_name: str = None) -> Flask:
         }
     })
     
+    # Initialize Redis Manager
+    redis_host = app.config.get('REDIS_HOST', 'localhost')
+    redis_port = app.config.get('REDIS_PORT', 6379)
+    redis_db = app.config.get('REDIS_DB', 0)
+    redis_password = app.config.get('REDIS_PASSWORD')
+    
+    try:
+        redis_manager.__init__(
+            host=redis_host,
+            port=redis_port,
+            db=redis_db,
+            password=redis_password
+        )
+        logger.info("Redis manager initialized successfully")
+    except Exception as e:
+        logger.error(f"Redis manager initialization failed: {e}")
+
+    # Initialize WebSocket Manager
+    websocket_manager.init_app(app)
+    websocket_manager.redis_client = redis_manager.client
+    global socketio
+    socketio = websocket_manager.socketio
+    logger.info("WebSocket manager initialized successfully")
+
     # Initialize database
     # Adjust engine options for in-memory SQLite to avoid invalid pool args
     try:
@@ -297,17 +328,115 @@ def create_app(config_name: str = None) -> Flask:
     except Exception as e:
         logger.error(f"Failed to setup security service: {e}")
     
+    # Initialize Price Stream Manager (production only)
+    if app.config.get('FLASK_ENV') == 'production':
+        try:
+            global price_stream_manager
+            symbols = ['BTCUSDT', 'ETHUSDT', 'ADAUSDT', 'DOTUSDT', 'LINKUSDT', 
+                      'BNBUSDT', 'XRPUSDT', 'LTCUSDT', 'BCHUSDT']
+            price_stream_manager = PriceStreamManager(redis_manager.client, symbols)
+            
+            # Add Binance streamer (primary)
+            price_stream_manager.add_binance_streamer()
+            
+            # Add CoinGecko streamer (fallback)
+            price_stream_manager.add_coingecko_streamer()
+            
+            # Start all streamers
+            price_stream_manager.start_all()
+            
+            logger.info("Price stream manager started successfully")
+        except Exception as e:
+            logger.error(f"Price stream manager initialization failed: {e}")
+
     # Health check endpoint
     @app.route('/health')
     def health_check():
         """Sistem sağlık kontrolü"""
+        health_status = {
+            'status': 'healthy',
+            'timestamp': datetime.utcnow().isoformat(),
+            'components': {}
+        }
+        
+        # Security service check
         if security_service:
-            status = security_service.get_service_status()
-            return status.__dict__, 200 if getattr(status, 'is_healthy', False) else 503
-        return {'status': 'service_not_initialized'}, 503
+            try:
+                status = security_service.get_service_status()
+                health_status['components']['security'] = {
+                    'status': 'healthy' if getattr(status, 'is_healthy', False) else 'unhealthy',
+                    'details': status.__dict__
+                }
+            except Exception as e:
+                health_status['components']['security'] = {
+                    'status': 'unhealthy',
+                    'error': str(e)
+                }
+        else:
+            health_status['components']['security'] = {'status': 'not_initialized'}
+        
+        # WebSocket check
+        try:
+            ws_stats = websocket_manager.get_connection_stats()
+            health_status['components']['websocket'] = {
+                'status': 'healthy',
+                'connections': ws_stats.get('total_connections', 0),
+                'subscriptions': ws_stats.get('active_subscriptions', 0)
+            }
+        except Exception as e:
+            health_status['components']['websocket'] = {
+                'status': 'unhealthy',
+                'error': str(e)
+            }
+        
+        # Redis check
+        try:
+            redis_manager.client.ping()
+            redis_stats = redis_manager.get_connection_stats()
+            health_status['components']['redis'] = {
+                'status': 'healthy',
+                'connected_clients': redis_stats.get('connected_clients', 0),
+                'memory_usage': redis_stats.get('used_memory_human', 'unknown')
+            }
+        except Exception as e:
+            health_status['components']['redis'] = {
+                'status': 'unhealthy',
+                'error': str(e)
+            }
+        
+        # Price streamer check
+        if price_stream_manager:
+            try:
+                streamer_health = price_stream_manager.get_health_status()
+                health_status['components']['price_streamer'] = {
+                    'status': 'healthy' if streamer_health['running_streamers'] > 0 else 'degraded',
+                    'total_streamers': streamer_health['total_streamers'],
+                    'running_streamers': streamer_health['running_streamers']
+                }
+            except Exception as e:
+                health_status['components']['price_streamer'] = {
+                    'status': 'unhealthy',
+                    'error': str(e)
+                }
+        
+        # Overall status
+        component_statuses = [comp.get('status', 'unknown') for comp in health_status['components'].values()]
+        if 'unhealthy' in component_statuses:
+            health_status['status'] = 'unhealthy'
+            status_code = 503
+        elif 'degraded' in component_statuses:
+            health_status['status'] = 'degraded'
+            status_code = 200
+        else:
+            status_code = 200
+        
+        return health_status, status_code
     
     # Security dashboard endpoints
     register_security_endpoints(app)
+    
+    # WebSocket API endpoints
+    register_websocket_endpoints(app)
     
     # Enhanced error handlers
     register_enhanced_error_handlers(app)
@@ -548,8 +677,60 @@ def register_blueprints(app: Flask):
     # Frontend Blueprint
     from .frontend import frontend_bp
     app.register_blueprint(frontend_bp)
+
+    # ML Blueprint (opsiyonel)
+    try:
+        from .ml.routes import ml_bp
+        app.register_blueprint(ml_bp)
+    except Exception as e:
+        logger.warning(f"ML routes not registered: {e}")
     
     logger.info("Blueprints registered successfully")
+
+def register_websocket_endpoints(app: Flask):
+    """WebSocket API endpoint'lerini kaydet"""
+    from flask import jsonify, request
+    from .core.rate_limiter import rate_limiter
+    
+    @app.route('/api/websocket/stats')
+    @rate_limiter.api_limit()
+    def websocket_stats():
+        """WebSocket istatistikleri"""
+        try:
+            stats = websocket_manager.get_connection_stats()
+            return jsonify(stats)
+        except Exception as e:
+            logger.error(f"WebSocket stats error: {e}")
+            return jsonify({'error': 'Stats unavailable'}), 500
+
+    @app.route('/api/websocket/health')
+    def websocket_health():
+        """WebSocket servisinin sağlık durumu"""
+        try:
+            # Redis bağlantısını test et
+            redis_healthy = redis_manager.client.ping()
+            
+            # Aktif bağlantı sayısını al
+            connection_count = len(websocket_manager.connection_metadata)
+            
+            health_status = {
+                'status': 'healthy',
+                'redis_connected': redis_healthy,
+                'active_connections': connection_count,
+                'socketio_initialized': websocket_manager.socketio is not None,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+            status_code = 200 if redis_healthy else 503
+            return jsonify(health_status), status_code
+            
+        except Exception as e:
+            logger.error(f"WebSocket health check error: {e}")
+            return jsonify({
+                'status': 'unhealthy',
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }), 503
 
 def register_security_endpoints(app: Flask):
     """Güvenlik monitoring endpoint'lerini kaydet"""

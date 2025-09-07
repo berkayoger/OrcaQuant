@@ -220,6 +220,13 @@ def create_app(config_object: str | None = None) -> Flask:
     except Exception:
         pass
 
+    # ML Blueprint (opsiyonel)
+    try:
+        from backend.ml.routes import ml_bp
+        app.register_blueprint(ml_bp)
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"ML routes not registered: {e}")
+
     # --- RESTX API v1 (versioned) ---
     try:
         from backend.api.restx_v1 import create_v1_blueprint

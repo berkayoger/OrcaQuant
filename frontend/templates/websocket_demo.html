@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrcaQuant WebSocket Demo</title>
+    <script src="https://cdn.socket.io/4.7.3/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="price-dashboard">
+        <!-- WebSocket dashboard will be initialized here -->
+    </div>
+
+    <!-- Load the WebSocket client -->
+    <script src="{{ url_for('static', filename='js/websocket-client.js') }}"></script>
+</body>
+</html>
