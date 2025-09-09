@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="tr-TR" class="theme-dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrcaQuant - Akıllı DeFi Analiz Platformu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* Apple'dan ilham alan genel stil ve animasyonlar */
+        html {
+            scroll-behavior: smooth;
+        }
+        body {
+            background-color: #000000;
+            color: #F5F5F7;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .theme-dark {
+            --bg-color: #000;
+            --text-color: #F5F5F7;
+            --text-color-secondary: #a1a1a6;
+            --section-bg: #111;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+        
+        .section-header-headline {
+            font-size: clamp(2.5rem, 5vw, 4.5rem);
+            line-height: 1.1;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        
+        .typography-ps-headline-super {
+             font-size: clamp(3rem, 7vw, 6rem);
+             font-weight: 800;
+             line-height: 1.05;
+             letter-spacing: -0.025em;
+        }
+
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .fade-in.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .sticky-nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            background-color: rgba(0,0,0,0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .media-card {
+            background-color: var(--section-bg);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .media-card .content-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+        }
+
+        .dotnav-item.active a {
+            background-color: white;
+        }
+        .roadmap::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #374151; /* gray-700 */
+            transform: translateX(-50%);
+        }
+    </style>
+</head>
+
+<body class="theme-dark">
+
+    <!-- Global Nav - Basitleştirilmiş Versiyon -->
+    <nav class="sticky-nav">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="#" class="text-2xl font-bold tracking-tighter">OrcaQuant</a>
+                </div>
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="text-gray-300 hover:text-white transition-colors">Özellikler</a>
+                    <a href="#roadmap" class="text-gray-300 hover:text-white transition-colors">Yol Haritası</a>
+                    <a href="#community" class="text-gray-300 hover:text-white transition-colors">Topluluk</a>
+                </div>
+                <div>
+                     <a href="#early-access" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-full transition-colors">
+                        Erken Erişim İçin Kaydolun
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Ana (Hero) Bölüm -->
+    <main id="main">
+        <section class="h-screen flex flex-col justify-center items-center text-center relative overflow-hidden">
+            <div class="absolute inset-0 z-0">
+                 <img src="image_a906b1.jpg" class="w-full h-full object-cover opacity-50" alt="Derin mavi bir okyanusun içinde parlayan veri akışları arasında yüzen bir orka">
+            </div>
+            <div class="z-10 px-4">
+                <h1 class="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter mb-4 fade-in">DeFi Karmaşasını Zekaya Bırakın.</h1>
+                <p class="text-lg md:text-2xl max-w-3xl mx-auto text-gray-300 mb-8 fade-in" style="transition-delay: 150ms;">
+                    Yapay zekanın gücüyle en verimli ve güvenli fırsatları keşfedin. Kendi stratejinizi güvenle oluşturun. DeFi analizinin geleceğine ilk erişenlerden olun.
+                </p>
+                <div class="fade-in" style="transition-delay: 300ms;">
+                    <a href="#early-access" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform hover:scale-105">
+                        Analize Başla
+                    </a>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Problem Bölümü -->
+        <section id="problem" class="py-20 md:py-32 bg-black">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                 <header class="text-center mb-16 md:mb-24">
+                    <h2 class="section-header-headline fade-in">Piyasayı tahmin etmeye çalışmaktan yoruldunuz mu?</h2>
+                </header>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-12 text-center text-gray-400">
+                    <div class="fade-in">
+                        <svg class="mx-auto h-20 w-20 mb-6" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:rgb(59,130,246);stop-opacity:1" /><stop offset="100%" style="stop-color:rgb(37,99,235);stop-opacity:1" /></linearGradient></defs><path d="M50 10 V 40 M20 25 H 80 M20 75 H 80 M30 40 L 70 60 M70 40 L 30 60" stroke="url(#grad1)" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M50 60 V 90" stroke="url(#grad1)" stroke-width="2" fill="none" stroke-linecap="round"/><rect x="15" y="10" width="70" height="80" rx="10" stroke-width="2" stroke-opacity="0.3" stroke="#3B82F6" fill="none" /></svg>
+                        <h3 class="text-2xl font-bold text-white mb-2">Zaman Kaybı</h3>
+                        <p>Yüzlerce proje arasında en iyi ve en güvenli getiriyi bulmak için saatlerce, hatta günlerce süren araştırma.</p>
+                    </div>
+                     <div class="fade-in" style="transition-delay: 200ms;">
+                        <svg class="mx-auto h-20 w-20 mb-6" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M20 20 L 80 80 M20 80 L 80 20" stroke="#EF4444" stroke-width="2" stroke-linecap="round" /><path d="M50 10 C 20 10, 20 90, 50 90 S 80 10, 50 10" stroke="#F5F5F7" stroke-width="3" fill="none" stroke-dasharray="8 5" /></svg>
+                        <h3 class="text-2xl font-bold text-white mb-2">Güvenlik Riski</h3>
+                        <p>Dolandırıcılık, 'rug pull' ve akıllı kontrat riskleriyle dolu, sermayenizin her an tehlike olduğu bir ekosistem.</p>
+                    </div>
+                     <div class="fade-in" style="transition-delay: 400ms;">
+                        <svg class="mx-auto h-20 w-20 mb-6" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><polyline points="10,50 25,30 40,60 55,40 70,70 85,50" stroke="#F5F5F7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        <h3 class="text-2xl font-bold text-white mb-2">Sürekli Stres</h3>
+                        <p>7/24 açık piyasaları takip etmenin getirdiği yorgunluk, fırsatı kaçırma (FOMO) ve yanlış karar verme korkusu.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Öne Çıkanlar Bölümü (Çözüm) -->
+        <section id="features" class="py-20 md:py-32 bg-[#050505]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <header class="text-center mb-16 md:mb-24">
+                    <h2 class="section-header-headline fade-in">İşte bu yüzden OrcaQuant var.</h2>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Kart 1: AI Quant Motoru -->
+                    <div class="media-card fade-in">
+                        <div class="content-container">
+                             <h3 class="text-3xl font-bold mb-4">AI Destekli Analiz Motoru</h3>
+                             <p class="text-gray-400">Yapay zeka motorumuz, zincir-üstü verileri ve piyasa duyarlılığını analiz ederek insan hatasını ortadan kaldırır ve en kârlı fırsatları belirler.</p>
+                         </div>
+                         <img src="https://placehold.co/600x400/111111/FFFFFF?text=Yapay+Zeka+Karar+Ağı" alt="Birbirine bağlı veri noktalarından oluşan bir yapay zeka beyin görseli" class="w-full h-auto object-cover">
+                    </div>
+                    <!-- Kart 2: Fırsat Tarayıcı -->
+                    <div class="media-card fade-in" style="transition-delay: 150ms;">
+                        <div class="content-container">
+                            <h3 class="text-3xl font-bold mb-4">Fırsat Tarayıcı</h3>
+                             <p class="text-gray-400">Binlerce likidite havuzunu ve getiri fırsatını risk/getiri metriklerine göre tarayın ve karşılaştırın. Bir sonraki hamlenizi verilerle destekleyin.</p>
+                        </div>
+                        <img src="https://placehold.co/600x400/111111/3B82F6?text=Fırsat+Tarayıcı+Arayüzü" alt="Kullanıcı dostu Fırsat Tarayıcı panelinin bir çizimi" class="w-full h-auto object-cover">
+                    </div>
+                    <!-- Kart 3: Güvenlik Analizi -->
+                    <div class="media-card fade-in" style="transition-delay: 300ms;">
+                        <div class="content-container">
+                            <h3 class="text-3xl font-bold mb-4">Entegre Güvenlik Analizi</h3>
+                            <p class="text-gray-400">Yatırım yapmayı düşündüğünüz protokollerin denetim raporlarını ve risk skorlarını tek bir yerden görerek bilinçli kararlar verin.</p>
+                        </div>
+                        <img src="https://placehold.co/600x400/111111/22C55E?text=Güvenlik+Skorları" alt="Dijital bir kalkanın katmanlarını gösteren şematik çizim" class="w-full h-auto object-cover">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dört Karar Motoru Bölümü -->
+        <section id="motors" class="py-20 md:py-32 bg-black">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <header class="text-center mb-16 md:mb-24">
+                     <h2 class="typography-ps-headline-super fade-in">
+                         Tek Bir Zeka Değil, <span class="text-blue-500 glow-text">Bir Konsensüs.</span>
+                    </h2>
+                    <p class="mt-6 text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto fade-in" style="transition-delay: 200ms;">
+                        Piyasayı dört farklı açıdan analiz eden motorlarımız, size en dengeli ve güvenilir sinyalleri sunmak için bir araya gelir.
+                    </p>
+                </header>
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- KM1 -->
+                    <div class="group rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition fade-in">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs rounded-full px-2 py-1 bg-white/10 text-slate-300">Hız</div>
+                            <svg viewBox="0 0 64 64" class="w-10 h-10 text-cyan-400"> <path d="M6 46l10-14 10 8 10-12 8 8 12-16" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/> <path d="M46 20l10 2-2 10" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/> </svg>
+                        </div>
+                        <h3 class="mt-4 font-semibold text-white">KM1 – Kısa Vade Avcısı</h3>
+                        <p class="mt-2 text-sm text-slate-300">RSI, MACD ve momentum göstergelerini kullanarak anlık piyasa dalgalanmalarını ve kısa vadeli trendleri yakalar.</p>
+                    </div>
+                    <!-- KM2 -->
+                    <div class="group rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition fade-in" style="transition-delay: 150ms;">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs rounded-full px-2 py-1 bg-white/10 text-slate-300">Stabilite</div>
+                            <svg viewBox="0 0 64 64" class="w-10 h-10 text-amber-400"> <path d="M12 32c0-12 10-20 20-20s20 8 20 20-10 20-20 20S12 44 12 32z" fill="none" stroke="currentColor" strokeWidth="6"/> <path d="M12 32c8-6 16-6 24 0" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round"/> </svg>
+                        </div>
+                        <h3 class="mt-4 font-semibold text-white">KM2 – Uzun Vade Bilgesi</h3>
+                        <p class="mt-2 text-sm text-slate-300">Piyasa rejimlerini ve uzun vadeli trendleri analiz ederek, büyük resmi görür ve stratejik konumlanma önerileri sunar.</p>
+                    </div>
+                    <!-- KM3 -->
+                    <div class="group rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition fade-in" style="transition-delay: 300ms;">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs rounded-full px-2 py-1 bg-white/10 text-slate-300">Duyarlılık</div>
+                            <svg viewBox="0 0 64 64" class="w-10 h-10 text-indigo-400"> <circle cx="32" cy="32" r="6" fill="currentColor"/> <circle cx="32" cy="32" r="14" fill="none" stroke="currentColor" strokeWidth="4"/> <circle cx="32" cy="32" r="22" fill="none" stroke="currentColor" strokeWidth="3" opacity=".8"/> <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" strokeWidth="2" opacity=".6"/> </svg>
+                        </div>
+                        <h3 class="mt-4 font-semibold text-white">KM3 – Duygu Tercümanı</h3>
+                        <p class="mt-2 text-sm text-slate-300">Sosyal medya ve haber akışlarındaki duygu skorlarını analiz ederek, piyasanın genel psikolojisini ve beklentilerini ölçer.</p>
+                    </div>
+                    <!-- KM4 -->
+                    <div class="group rounded-2xl border border-white/10 bg-white/5 p-5 hover:bg-white/10 transition fade-in" style="transition-delay: 450ms;">
+                        <div class="flex items-center justify-between">
+                            <div class="text-xs rounded-full px-2 py-1 bg-white/10 text-slate-300">Konsensüs</div>
+                            <svg viewBox="0 0 64 64" class="w-10 h-10 text-fuchsia-400"> <path d="M12 8l20 24L52 8" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round"/> <path d="M12 56l20-24 20 24" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round"/> <path d="M26 44c6 6 14 6 22 0-6-10-18-10-22 0z" fill="currentColor" opacity=".9"/> </svg>
+                        </div>
+                        <h3 class="mt-4 font-semibold text-white">KM4 – Konsensüs Ustası</h3>
+                        <p class="mt-2 text-sm text-slate-300">Diğer üç motorun sinyallerini birleştirir, ağırlıklandırır ve size nihai bir güven skoru ve eylem önerisi sunar.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- Risk Uyarısı ve Eğitim Bölümü -->
+        <section id="risk-education" class="py-20 md:py-32 bg-black">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <header class="text-center mb-16 md:mb-24">
+                    <h2 class="section-header-headline fade-in">Riskleri Anlamak: Bilinçli Yatırım</h2>
+                    <p class="mt-4 text-lg text-gray-400 max-w-3xl mx-auto fade-in" style="transition-delay: 150ms;">DeFi, yüksek getiri potansiyeli sunarken, kendine özgü riskler de barındırır. OrcaQuant olarak şeffaflığa inanıyoruz. İşte bilmeniz gerekenler:</p>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+                    <!-- Akıllı Kontrat Riski -->
+                    <div class="bg-black/50 p-8 rounded-2xl fade-in">
+                         <h3 class="text-2xl font-bold text-white mb-3">Akıllı Kontrat Riski Nedir?</h3>
+                         <p class="text-gray-400">Her DeFi protokolü, kodla yazılmış akıllı kontratlar üzerinde çalışır. Bu kodlardaki hatalar veya güvenlik açıkları, fonların kaybına yol açabilir. OrcaQuant, bu riski en aza indirmek için tüm entegre protokollerin en iyi firmalar tarafından denetlenmesini sağlar.</p>
+                    </div>
+                    <!-- Impermanent Loss -->
+                    <div class="bg-black/50 p-8 rounded-2xl fade-in" style="transition-delay: 150ms;">
+                         <h3 class="text-2xl font-bold text-white mb-3">Impermanent Loss (Geçici Kayıp)</h3>
+                         <p class="text-gray-400">Likidite havuzlarına yatırım yaptığınızda, varlıklarınızın fiyatı değişirse, sadece elinizde tutmanıza kıyasla değer kaybı yaşayabilirsiniz. Quant Motorumuz, bu riski minimize eden ve volatiliteyi hesaba katan stratejiler uygular.</p>
+                    </div>
+                </div>
+                <div class="mt-12 bg-blue-900/20 border border-blue-800 p-6 rounded-2xl text-center fade-in" style="transition-delay: 300ms;">
+                     <h3 class="text-xl font-bold text-blue-300">Yasal Uyarı ve Risk Bildirimi</h3>
+                     <p class="text-blue-400 mt-2 text-sm max-w-3xl mx-auto">Kripto varlık yatırımları yüksek piyasa riski içerir. OrcaQuant, bir yatırım danışmanlığı hizmeti değildir ve potansiyel kayıplarınızdan sorumlu tutulamaz. Lütfen kendi araştırmanızı yapın ve yalnızca kaybetmeyi göze alabileceğiniz miktarda yatırım yapın. Geçmiş performans, gelecekteki sonuçların garantisi değildir.</p>
+                </div>
+                 <div class="text-center mt-16 fade-in" style="transition-delay: 450ms;">
+                     <a href="#" class="text-blue-400 hover:text-white transition-colors text-lg">DeFi'ye Yeni misiniz? Başlangıç Rehberimizi Okuyun →</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Güven Sinyalleri Bölümü -->
+        <section id="trust-signals" class="py-20 md:py-32 bg-[#050505]">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <header class="text-center mb-16 md:mb-24">
+                    <h2 class="section-header-headline fade-in">Sözlerden Daha Fazlası: Kanıtlarımız</h2>
+                    <p class="mt-4 text-lg text-gray-400 max-w-3xl mx-auto fade-in" style="transition-delay: 150ms;">Vizyonumuzu, somut adımlar ve güçlü ortaklıklarla destekliyoruz. Projemizin gelişimini şeffaf bir şekilde takip edin.</p>
+                </header>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-center max-w-4xl mx-auto">
+                    <!-- Ortaklıklar -->
+                    <div class="bg-black/50 p-8 rounded-2xl fade-in">
+                        <img src="https://placehold.co/128x128/111111/FFFFFF?text=🤝" class="mx-auto h-20 w-20 mb-6" alt="[El sıkışma ikonu]">
+                        <h3 class="text-2xl font-bold text-white mb-2">Stratejik Ortaklıklar</h3>
+                        <p class="text-gray-400">DeFi'nin en güvenilir isimleriyle işbirliği yaparak, teknolojimizi ve güvenliğimizi en üst seviyeye taşıyoruz. Ortaklarımız arasında Chainlink ve The Graph gibi sektör liderleri bulunmaktadır.</p>
+                    </div>
+                    <!-- Teknik Blog -->
+                    <div class="bg-black/50 p-8 rounded-2xl fade-in" style="transition-delay: 150ms;">
+                        <img src="https://placehold.co/128x128/111111/FFFFFF?text=✍️" class="mx-auto h-20 w-20 mb-6" alt="[Yazan kalem ikonu]">
+                        <h3 class="text-2xl font-bold text-white mb-2">Teknik Derinlik</h3>
+                        <p class="text-gray-400">Quant motorumuzun arkasındaki matematiği ve AI modellerimizi anlattığımız detaylı yazılarımızı Medium'da okuyun. Teknolojimizin nasıl çalıştığını şeffaf bir şekilde paylaşıyoruz.</p>
+                        <a href="#" class="text-blue-400 hover:underline mt-4 inline-block">Blog'a Göz Atın →</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Yol Haritası -->
+        <section id="roadmap" class="py-20 md:py-32 bg-black">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <header class="text-center mb-16 md:mb-24">
+                    <h2 class="section-header-headline fade-in">Geleceğe Giden Yol</h2>
+                    <p class="mt-4 text-lg text-gray-400 max-w-3xl mx-auto fade-in" style="transition-delay: 150ms;">Şeffaflık ilkemiz gereği, yol haritamızı sizinle paylaşıyoruz. İşte OrcaQuant'ı bekleyen heyecan verici adımlar.</p>
+                </header>
+                <div class="relative roadmap">
+                    <!-- Milestone 1 -->
+                    <div class="mb-12 flex items-center w-full">
+                        <div class="w-1/2 flex justify-end">
+                            <div class="w-2/3 p-6 bg-[#111] rounded-lg shadow-md fade-in">
+                                <h3 class="text-xl font-bold text-blue-400">Q3 2025</h3>
+                                <p class="text-gray-300 mt-2">Topluluk Oluşturma ve Whitelist Başlangıcı</p>
+                            </div>
+                        </div>
+                        <div class="w-10 h-10 bg-blue-500 rounded-full absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-center text-white font-bold">1</div>
+                    </div>
+                     <!-- Milestone 2 -->
+                    <div class="mb-12 flex items-center w-full">
+                        <div class="w-1/2"></div>
+                        <div class="w-1/2 flex justify-start">
+                             <div class="w-2/3 p-6 bg-[#111] rounded-lg shadow-md fade-in">
+                                <h3 class="text-xl font-bold text-blue-400">Q4 2025</h3>
+                                <p class="text-gray-300 mt-2">Kapalı Beta Lansmanı ve İlk Denetim Raporları</p>
+                            </div>
+                        </div>
+                         <div class="w-10 h-10 bg-blue-500 rounded-full absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-center text-white font-bold">2</div>
+                    </div>
+                     <!-- Milestone 3 -->
+                    <div class="mb-12 flex items-center w-full">
+                        <div class="w-1/2 flex justify-end">
+                            <div class="w-2/3 p-6 bg-[#111] rounded-lg shadow-md fade-in">
+                                <h3 class="text-xl font-bold text-blue-400">Q1 2026</h3>
+                                <p class="text-gray-300 mt-2">Halka Açık Lansman ve $OQNT Token Oluşturma Etkinliği (TGE)</p>
+                            </div>
+                        </div>
+                         <div class="w-10 h-10 bg-blue-500 rounded-full absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-center text-white font-bold">3</div>
+                    </div>
+                     <!-- Milestone 4 -->
+                     <div class="flex items-center w-full">
+                        <div class="w-1/2"></div>
+                        <div class="w-1/2 flex justify-start">
+                             <div class="w-2/3 p-6 bg-[#111] rounded-lg shadow-md fade-in">
+                                <h3 class="text-xl font-bold text-blue-400">Q2 2026</h3>
+                                <p class="text-gray-300 mt-2">DAO Yönetişiminin Başlatılması ve Yeni Zincir Entegrasyonları</p>
+                            </div>
+                        </div>
+                         <div class="w-10 h-10 bg-blue-500 rounded-full absolute left-1/2 -translate-x-1/2 z-10 flex items-center justify-center text-white font-bold">4</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- YENİ BÖLÜM: Topluluğa Katıl & Email Kaydı -->
+        <section id="early-access" class="py-20 md:py-40 bg-black">
+             <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+                <h2 class="section-header-headline fade-in">Değişimin Parçası Olun.</h2>
+                <p class="mt-4 text-lg text-gray-400 max-w-3xl mx-auto fade-in" style="transition-delay: 150ms;">Erken erişim listemize kaydolun, beta sürümüne ilk girenlerden biri olun ve özel topluluk avantajlarından yararlanın.</p>
+                <form class="mt-12 max-w-lg mx-auto fade-in" style="transition-delay: 300ms;">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <input type="email" placeholder="E-posta adresiniz" class="flex-grow bg-gray-900 border-gray-700 rounded-md shadow-sm py-3 px-4 text-white focus:ring-blue-500 focus:border-blue-500">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full transition-colors">Listeye Katıl</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer id="community" class="bg-black border-t border-gray-800">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+             <div class="text-center mb-8">
+                <h3 class="text-2xl font-bold">Okyanusa Katılın</h3>
+                <p class="text-gray-400 mt-2">En son stratejiler ve güncellemeler için topluluğumuza katılın.</p>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Ürün</h3>
+                    <ul class="mt-4 space-y-4">
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">OrcaVaults</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Quant Motoru</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Güvenlik</a></li>
+                    </ul>
+                </div>
+                 <div>
+                    <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Kaynaklar</h3>
+                    <ul class="mt-4 space-y-4">
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Whitepaper</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Dokümanlar</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Blog</a></li>
+                    </ul>
+                </div>
+                 <div>
+                    <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Topluluk</h3>
+                    <ul class="mt-4 space-y-4">
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Discord</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">X (Twitter)</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Telegram</a></li>
+                    </ul>
+                </div>
+                 <div>
+                    <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Yasal</h3>
+                    <ul class="mt-4 space-y-4">
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Kullanım Koşulları</a></li>
+                        <li><a href="#" class="text-base text-gray-300 hover:text-white">Gizlilik Politikası</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="mt-8 border-t border-gray-800 pt-8 text-center">
+                <p class="text-base text-gray-400">&copy; 2025 OrcaQuant. Tüm hakları saklıdır.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Basit "scroll" ile beliren animasyon
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+        
+        // Dashboard Widgets Script
+        document.addEventListener('DOMContentLoaded', () => {
+            const dashboardObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // 1. TVL Counter Animation
+                        const tvlCounter = document.getElementById('tvl-counter');
+                        if (tvlCounter && !tvlCounter.classList.contains('animated')) {
+                            tvlCounter.classList.add('animated');
+                            const targetTVL = 125478963;
+                            let currentTVL = 0;
+                            const duration = 2000;
+                            const stepTime = 20;
+                            const steps = duration / stepTime;
+                            const increment = targetTVL / steps;
+
+                            const updateCounter = () => {
+                                currentTVL += increment;
+                                if (currentTVL >= targetTVL) {
+                                    currentTVL = targetTVL;
+                                    tvlCounter.innerText = `$${Math.floor(currentTVL).toLocaleString('en-US')}`;
+                                    clearInterval(interval);
+                                } else {
+                                    tvlCounter.innerText = `$${Math.floor(currentTVL).toLocaleString('en-US')}`;
+                                }
+                            };
+                            const interval = setInterval(updateCounter, stepTime);
+                        }
+
+                        // Chart.js global settings
+                        Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+                        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+                        // 2. Performance Chart
+                        const perfCtx = document.getElementById('performanceChart');
+                        if (perfCtx && !perfCtx.classList.contains('rendered')) {
+                            perfCtx.classList.add('rendered');
+                            const gradient = perfCtx.getContext('2d').createLinearGradient(0, 0, 0, 300);
+                            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+                            gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+                            new Chart(perfCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz'],
+                                    datasets: [{
+                                        label: 'Portföy Değeri',
+                                        data: [100000, 110000, 105000, 125000, 135000, 150000, 175000],
+                                        borderColor: 'rgba(59, 130, 246, 1)',
+                                        backgroundColor: gradient,
+                                        fill: true,
+                                        tension: 0.4,
+                                        pointBackgroundColor: 'rgba(59, 130, 246, 1)',
+                                        pointRadius: 0,
+                                        pointHoverRadius: 7,
+                                        pointHoverBorderColor: '#000',
+                                        pointHoverBorderWidth: 2
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            mode: 'index',
+                                            intersect: false,
+                                            callbacks: {
+                                                label: function(context) {
+                                                    let label = context.dataset.label || '';
+                                                    if (label) {
+                                                        label += ': ';
+                                                    }
+                                                    if (context.parsed.y !== null) {
+                                                        label += new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(context.parsed.y);
+                                                    }
+                                                    return label;
+                                                }
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        y: {
+                                            beginAtZero: false,
+                                            ticks: {
+                                                callback: function(value) {
+                                                    return '$' + (value / 1000) + 'k';
+                                                }
+                                            }
+                                        }
+                                    },
+                                    interaction: {
+                                        mode: 'index',
+                                        intersect: false
+                                    }
+                                }
+                            });
+                        }
+
+                        // 3. Risk Distribution Chart
+                        const riskCtx = document.getElementById('riskChart');
+                        if (riskCtx && !riskCtx.classList.contains('rendered')) {
+                            riskCtx.classList.add('rendered');
+                            new Chart(riskCtx, {
+                                type: 'doughnut',
+                                data: {
+                                    labels: ['Düşük Risk', 'Orta Risk', 'Yüksek Risk'],
+                                    datasets: [{
+                                        label: 'Risk Dağılımı',
+                                        data: [60, 30, 10],
+                                        backgroundColor: [
+                                            'rgba(59, 130, 246, 0.8)',
+                                            'rgba(34, 197, 94, 0.8)',
+                                            'rgba(239, 68, 68, 0.8)'
+                                        ],
+                                        borderColor: '#111',
+                                        borderWidth: 4,
+                                        hoverOffset: 8
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    cutout: '70%',
+                                    plugins: {
+                                        legend: {
+                                            position: 'bottom',
+                                            labels: {
+                                                padding: 20,
+                                                boxWidth: 12
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                        
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.5 });
+            
+            const dashboard = document.getElementById('interactive-dashboard');
+            if(dashboard) {
+                dashboardObserver.observe(dashboard);
+            }
+
+        });
+    </script>
+</body>
+
+</html>
+
