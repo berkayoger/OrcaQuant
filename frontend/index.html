@@ -4,17 +4,30 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OrcaQuant - DeFi'de Kaybolmayın, Bilinçli Hareket Edin</title>
+  <meta name="description" content="DeFi araştırması için risk odaklı, Türkçe açıklamalı araçlar. Protokol tarayıcı, güvenlik kontrol, karşılaştırma paneli, portföy izleyici ve daha fazlası." />
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark light" />
+  <meta property="og:title" content="OrcaQuant - DeFi'de Kaybolmayın, Bilinçli Hareket Edin" />
+  <meta property="og:description" content="DeFi dünyası karmaşık ve riskli. Biz araçları sunuyoruz; karar sizden." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://i.pinimg.com/736x/16/07/82/1607826d5234d390f4feef3c4a2c5d83.jpg" />
+  <meta property="og:locale" content="tr_TR" />
+  <meta name="twitter:card" content="summary_large_image" />
 
-  <!-- TailwindCSS CDN (prod geçişinde yerel derleme önerilir) -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- TailwindCSS CDN (prod'da Vite/Next ile yerel derleme) -->
+  <script src="https://cdn.tailwindcss.com" defer></script>
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
+  <!-- Görsel performansı: hero görselini preload -->
+  <link rel="preload" as="image" href="https://i.pinimg.com/736x/16/07/82/1607826d5234d390f4feef3c4a2c5d83.jpg" />
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+
   <style>
-    :root { --section-bg: #0b0b0b; }
+    :root { --section-bg: #0b0b0b; --site-bg-image: url('https://i.pinimg.com/736x/16/07/82/1607826d5234d390f4feef3c4a2c5d83.jpg'); }
     html { scroll-behavior: smooth; }
     body { background:#000; color:#F5F5F7; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     .sticky-blur { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: rgba(0,0,0,.6); }
@@ -25,37 +38,76 @@
     .badge { border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.06); border-radius:999px; padding:.25rem .6rem; font-size:.75rem; }
     .fade-in{opacity:0; transform: translateY(18px); transition: opacity .6s ease, transform .6s ease}
     .fade-in.is-visible{opacity:1; transform:none}
+    .anchor-offset { scroll-margin-top: 112px; }
+    .skip-link{ position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;}
+    .skip-link:focus{ position: fixed; left: 1rem; top: 1rem; z-index: 50; width: auto; height: auto; padding:.5rem .75rem; background:#111827; color:#fff; border-radius:.5rem; outline:2px solid #60a5fa; }
+    nav a[aria-current="true"]{ color:#fff; }
     @media (prefers-reduced-motion: reduce){ .fade-in{opacity:1 !important; transform:none !important; transition:none !important} }
+      /* Site arka plan görseli (global) */
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      z-index:-1;
+      background-image:
+        radial-gradient(60% 50% at 50% 10%, rgba(59,130,246,.10), rgba(0,0,0,0)),
+        var(--site-bg-image);
+      background-size:cover;
+      background-position:center top;
+      background-repeat:no-repeat;
+      background-attachment:fixed;
+      opacity:.25; /* okunabilirlik için düşük opaklık */
+      filter:saturate(110%) contrast(105%);
+      pointer-events:none;
+    }
+    /* iOS/Safari kaydırma performansı için fixed yerine scroll */
+    @media (max-width: 768px){
+      body::before{ background-attachment:scroll; }
+    }
   </style>
+
+  <!-- Güvenlik notu (Sunucu başlıkları önerilir):
+  Content-Security-Policy, Referrer-Policy, X-Frame-Options, Permissions-Policy gibi başlıkları backend/proxy tarafında ekleyin. CDN scriptleri için nonce/sha256 gerekir. -->
 </head>
 <body>
+  <a href="#main" class="skip-link">İçeriğe atla</a>
+
   <!-- ÜST RİSK BANDI -->
-  <div class="sticky top-0 z-50 sticky-blur border-b border-white/10">
+  <div id="risk-band" class="sticky top-0 z-50 sticky-blur border-b border-white/10">
     <div class="max-w-7xl mx-auto px-4 py-2 flex flex-col md:flex-row items-center gap-2 md:gap-4 text-sm">
-      <div class="flex items-center gap-2"><span class="text-yellow-300">💡</span><span>Unutmayın: Kripto dünyası riskli bir yer. Size sadece araştırma araçları sunuyoruz, yatırım tavsiyesi vermiyoruz.</span></div>
-      <a href="#riskler" class="ml-auto text-blue-400 hover:text-blue-200 whitespace-nowrap">Neden bu kadar riskli?</a>
+      <div class="flex items-center gap-2">
+        <span class="text-yellow-300" aria-hidden="true">💡</span>
+        <span>Unutmayın: Kripto dünyası riskli bir yer. Size sadece araştırma araçları sunuyoruz, yatırım tavsiyesi vermiyoruz.</span>
+      </div>
+      <div class="ml-auto flex items-center gap-3">
+        <a href="#riskler" class="text-blue-400 hover:text-blue-200 whitespace-nowrap">Neden bu kadar riskli?</a>
+        <button id="risk-close" class="text-gray-400 hover:text-gray-200 px-2 rounded" aria-label="Uyarıyı kapat">×</button>
+      </div>
     </div>
   </div>
 
   <!-- NAV -->
   <header class="sticky top-[40px] md:top-[40px] z-40 sticky-blur border-b border-white/10">
-    <nav class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-      <a class="font-black tracking-tight text-xl" href="#">OrcaQuant</a>
+    <nav class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between" role="navigation" aria-label="Ana gezinme">
+      <a class="font-black tracking-tight text-xl" href="#" aria-label="OrcaQuant ana sayfa">OrcaQuant</a>
       <div class="hidden md:flex items-center gap-6">
         <span class="badge">BETA</span>
-        <a class="text-gray-300 hover:text-white" href="#nasil-calisir">Nasıl Çalışır?</a>
-        <a class="text-gray-300 hover:text-white" href="#araclar">Araçlarımız</a>
-        <a class="text-gray-300 hover:text-white" href="#riskler">Riskler Neler?</a>
-        <a class="text-gray-300 hover:text-white" href="#topluluk">Topluluk</a>
+        <a class="text-gray-300 hover:text-white" href="#nasil-calisir" data-section="nasil-calisir">Nasıl Çalışır?</a>
+        <a class="text-gray-300 hover:text-white" href="#araclar" data-section="araclar">Araçlarımız</a>
+        <a class="text-gray-300 hover:text-white" href="#riskler" data-section="riskler">Riskler Neler?</a>
+        <a class="text-gray-300 hover:text-white" href="#topluluk" data-section="topluluk">Topluluk</a>
       </div>
-      <a class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-full" href="#basla">Hemen Başla</a>
+      <a class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-full" href="#basla" data-section="basla">Hemen Başla</a>
     </nav>
   </header>
 
-  <main>
+  <main id="main">
     <!-- HERO -->
-    <section class="relative overflow-hidden">
-      <img class="absolute inset-0 w-full h-full object-cover opacity-40" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1920&auto=format&fit=crop" alt="Okyanus yüzeyi ve dalgalar"/>
+    <section class="relative overflow-hidden anchor-offset">
+      <picture class="absolute inset-0 -z-10">
+        <source srcset="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1920&auto=format&fit=crop">
+        <img class="inset-0 w-full h-full object-cover opacity-40" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1920&auto=format&fit=crop" alt="" aria-hidden="true" fetchpriority="high" loading="eager" decoding="async"/>
+      </picture>
       <div class="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_10%,rgba(59,130,246,.12),rgba(0,0,0,0))]"></div>
       <div class="relative max-w-7xl mx-auto px-4 py-24 md:py-36">
         <p class="kicker fade-in">DeFi Araştırma Platformu</p>
@@ -65,14 +117,14 @@
           <p class="text-sm text-gray-300"><strong>Bu bir yatırım tavsiyesi platformu değil!</strong> Sadece araştırma yapmak için gereken araçları sunuyoruz. Kararları siz veriyorsunuz, sorumluluğu da siz alıyorsunuz.</p>
         </div>
         <div class="mt-8 flex flex-col sm:flex-row gap-3 fade-in">
-          <a href="#basla" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl text-center">Araştırmaya Başla</a>
-          <a href="#riskler" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-xl text-center">Önce Riskleri Öğren</a>
+          <a href="#basla" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl text-center" data-section="basla">Araştırmaya Başla</a>
+          <a href="#riskler" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-xl text-center" data-section="riskler">Önce Riskleri Öğren</a>
         </div>
       </div>
     </section>
 
     <!-- SORUNLAR -->
-    <section class="py-20 md:py-28" id="sorunlar">
+    <section class="py-20 md:py-28 anchor-offset" id="sorunlar">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">Bu durumları yaşıyor musunuz?</h2>
         <p class="subhead mt-3 fade-in">DeFi'de herkesin karşılaştığı ortak sorunları çözmek için buradayız.</p>
@@ -86,7 +138,7 @@
     </section>
 
     <!-- NASIL ÇALIŞIR -->
-    <section class="py-20 md:py-28" id="nasil-calisir">
+    <section class="py-20 md:py-28 anchor-offset" id="nasil-calisir">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">Size nasıl yardım ediyoruz?</h2>
         <p class="subhead mt-3 fade-in">Karmaşık DeFi dünyasında kaybolmamanız için 3 adımda çözüm.</p>
@@ -112,7 +164,7 @@
     </section>
 
     <!-- ARAÇLAR -->
-    <section class="py-20 md:py-28" id="araclar">
+    <section class="py-20 md:py-28 anchor-offset" id="araclar">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">Araçlarımız neler?</h2>
         <p class="subhead mt-3 fade-in">DeFi araştırmanızı kolaylaştıracak pratik araçlar.</p>
@@ -128,7 +180,7 @@
     </section>
 
     <!-- KULLANICI HİKAYELERİ -->
-    <section class="py-20 md:py-28" id="hikayeler">
+    <section class="py-20 md:py-28 anchor-offset" id="hikayeler">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">Kullanıcılarımızın deneyimleri</h2>
         <p class="subhead mt-3 fade-in">Beta testinde katılan arkadaşlarımızın gerçek geri bildirimleri.</p>
@@ -141,7 +193,7 @@
     </section>
 
     <!-- RİSK EĞİTİMİ -->
-    <section class="py-20 md:py-28" id="riskler">
+    <section class="py-20 md:py-28 anchor-offset" id="riskler">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">DeFi neden bu kadar riskli?</h2>
         <p class="subhead mt-3 fade-in">Yatırım yapmadan önce mutlaka bilmeniz gereken riskler.</p>
@@ -191,16 +243,16 @@
     </section>
 
     <!-- NASIL BAŞLARIM -->
-    <section class="py-20 md:py-28" id="basla">
+    <section class="py-20 md:py-28 anchor-offset" id="basla">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">Nasıl başlarım?</h2>
         <p class="subhead mt-3 fade-in">DeFi yolculuğunuza güvenli şekilde başlamanız için adım adım rehber.</p>
 
         <div class="grid md:grid-cols-4 gap-6 mt-10">
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 1: Öğrenmeye Başla</h3><p class="text-gray-300 mt-2">Impermanent loss, yield farming, liquidity mining nedir?</p><a class="mt-3 inline-block text-blue-400" href="#araclar">Eğitim Merkezi →</a></div>
+          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 1: Öğrenmeye Başla</h3><p class="text-gray-300 mt-2">Impermanent loss, yield farming, liquidity mining nedir?</p><a class="mt-3 inline-block text-blue-400" href="#araclar" data-section="araclar">Eğitim Merkezi →</a></div>
           <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 2: Küçük Başla</h3><p class="text-gray-300 mt-2">100–500 TL gibi kaybetmeyi göze alabileceğiniz miktarla başlayın.</p><a class="mt-3 inline-block text-blue-400" href="#">Başlangıç Rehberi →</a></div>
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 3: Araştır</h3><p class="text-gray-300 mt-2">Protokolleri tarayın, risk skorlarını inceleyin, karşılaştırın.</p><a class="mt-3 inline-block text-blue-400" href="#araclar">Protokol Tarayıcı →</a></div>
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 4: Takip Et</h3><p class="text-gray-300 mt-2">Portföy izleyici ve uyarılarla değişikliklerden haberdar olun.</p><a class="mt-3 inline-block text-blue-400" href="#araclar">Portföy İzleyici →</a></div>
+          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 3: Araştır</h3><p class="text-gray-300 mt-2">Protokolleri tarayın, risk skorlarını inceleyin, karşılaştırın.</p><a class="mt-3 inline-block text-blue-400" href="#araclar" data-section="araclar">Protokol Tarayıcı →</a></div>
+          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 4: Takip Et</h3><p class="text-gray-300 mt-2">Portföy izleyici ve uyarılarla değişikliklerden haberdar olun.</p><a class="mt-3 inline-block text-blue-400" href="#araclar" data-section="araclar">Portföy İzleyici →</a></div>
         </div>
 
         <!-- Beta Kayıt Formu -->
@@ -208,16 +260,21 @@
           <h3 class="text-2xl font-bold">Beta testi için kayıt olun</h3>
           <p class="text-gray-300 mt-2">Platform henüz beta aşamasında. Ücretsiz erken erişim için e-postanızı bırakın, hazır olduğunda size haber verelim.</p>
           <form id="betaForm" class="mt-6 space-y-4" novalidate>
+            <div class="hidden" aria-hidden="true">
+              <label for="website">Websiteniz (boş bırakın)</label>
+              <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+            </div>
             <div>
               <label class="block text-sm text-gray-400 mb-1" for="email">E-posta</label>
-              <input id="email" name="email" type="email" required placeholder="ornek@posta.com" class="w-full px-4 py-3 rounded-lg bg-neutral-900 border border-white/10 outline-none focus:ring-2 focus:ring-blue-500" />
+              <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="ornek@posta.com" class="w-full px-4 py-3 rounded-lg bg-neutral-900 border border-white/10 outline-none focus:ring-2 focus:ring-blue-500" />
               <p id="emailError" class="mt-1 text-sm text-red-400 hidden">Lütfen geçerli bir e-posta girin.</p>
             </div>
             <label class="flex gap-3 items-start text-sm text-gray-300">
               <input id="age" type="checkbox" class="mt-1" required />
               <span>18 yaşından büyüğüm ve yukarıdaki risk uyarılarını okudum. Bu platformun yatırım tavsiyesi vermediğini anlıyorum.</span>
             </label>
-            <button id="submitBtn" type="submit" disabled class="w-full bg-blue-600 disabled:bg-blue-600/50 hover:bg-blue-700 font-semibold px-6 py-3 rounded-lg">Beta Listesine Katıl</button>
+            <button id="submitBtn" type="submit" disabled class="w-full bg-blue-600 disabled:bg-blue-600/50 hover:bg-blue-700 font-semibold px-6 py-3 rounded-lg">Beta Programına Abone Ol</button>
+            <p id="formStatus" class="text-sm"></p>
             <p class="text-xs text-gray-400">Kaydolduğunuzda spam göndermiyoruz. Sadece platform hazır olduğunda ve önemli güncellemelerde haber veririz. Gizlilik sözleşmemizi okuyabilirsiniz.</p>
           </form>
         </div>
@@ -225,7 +282,7 @@
     </section>
 
     <!-- YOL HARİTASI -->
-    <section class="py-20 md:py-28" id="yol-haritasi">
+    <section class="py-20 md:py-28 anchor-offset" id="yol-haritasi">
       <div class="max-w-7xl mx-auto px-4">
         <h2 class="headline text-3xl md:text-5xl fade-in">Ne zaman hangi özellik gelecek?</h2>
         <p class="subhead mt-3 fade-in">Şeffaflık önemli. Size ne zaman neyi sunacağımızı açık açık paylaşıyoruz.</p>
@@ -254,30 +311,30 @@
           <h4 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Öğrenin</h4>
           <ul class="mt-3 space-y-2 text-gray-300">
             <li><a href="#">DeFi Nedir?</a></li>
-            <li><a href="#riskler">Risk Rehberi</a></li>
-            <li><a href="#basla">Başlangıç Kılavuzu</a></li>
+            <li><a href="#riskler" data-section="riskler">Risk Rehberi</a></li>
+            <li><a href="#basla" data-section="basla">Başlangıç Kılavuzu</a></li>
           </ul>
         </div>
         <div>
           <h4 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Araçlar</h4>
           <ul class="mt-3 space-y-2 text-gray-300">
-            <li><a href="#araclar">Protokol Tarayıcı</a></li>
-            <li><a href="#araclar">Risk Hesaplayıcı</a></li>
-            <li><a href="#araclar">Portföy İzleyici</a></li>
+            <li><a href="#araclar" data-section="araclar">Protokol Tarayıcı</a></li>
+            <li><a href="#araclar" data-section="araclar">Risk Hesaplayıcı</a></li>
+            <li><a href="#araclar" data-section="araclar">Portföy İzleyici</a></li>
           </ul>
         </div>
         <div>
           <h4 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Topluluk</h4>
           <ul class="mt-3 space-y-2 text-gray-300">
-            <li><a href="#">Discord</a></li>
-            <li><a href="#">Twitter</a></li>
-            <li><a href="#">Telegram</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Discord</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Twitter</a></li>
+            <li><a href="#" target="_blank" rel="noopener noreferrer">Telegram</a></li>
           </ul>
         </div>
         <div>
           <h4 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Yasal</h4>
           <ul class="mt-3 space-y-2 text-gray-300">
-            <li><a href="#riskler">Risk Bildirimi</a></li>
+            <li><a href="#riskler" data-section="riskler">Risk Bildirimi</a></li>
             <li><a href="#">Gizlilik</a></li>
             <li><a href="#">Kullanım Koşulları</a></li>
           </ul>
@@ -300,7 +357,38 @@
       } catch { document.querySelectorAll('.fade-in').forEach(el=>el.classList.add('is-visible')); }
     })();
 
-    // Beta formu: temel doğrulama + yaş onayı
+    // Scrollspy: aktif bölüm linkini vurgula
+    (function(){
+      const links = Array.from(document.querySelectorAll('nav a[data-section]'));
+      const map = new Map(links.map(a => [a.getAttribute('data-section'), a]));
+      const sections = Array.from(document.querySelectorAll('section[id]'));
+      if(!('IntersectionObserver' in window)) return;
+      const spy = new IntersectionObserver((entries)=>{
+        let current = null;
+        for(const e of entries){
+          if(e.isIntersecting) current = e.target.id;
+        }
+        if(!current) return;
+        for(const a of links) a.setAttribute('aria-current','false');
+        const active = map.get(current);
+        if(active) active.setAttribute('aria-current','true');
+      }, { rootMargin: '-50% 0px -45% 0px', threshold: [0, 1] });
+      sections.forEach(s => spy.observe(s));
+    })();
+
+    // Üst risk bandını kapat / aç (oturum bazlı)
+    (function(){
+      const band = document.getElementById('risk-band');
+      const btn = document.getElementById('risk-close');
+      if(!band || !btn) return;
+      if(sessionStorage.getItem('riskBandHidden') === '1') band.style.display = 'none';
+      btn.addEventListener('click', () => {
+        band.style.display = 'none';
+        sessionStorage.setItem('riskBandHidden', '1');
+      });
+    })();
+
+    // Beta formu: temel doğrulama + honeypot + durum mesajı
     (function(){
       const form = document.getElementById('betaForm');
       if(!form) return;
@@ -308,6 +396,8 @@
       const emailError = document.getElementById('emailError');
       const age = document.getElementById('age');
       const submitBtn = document.getElementById('submitBtn');
+      const status = document.getElementById('formStatus');
+      const honeypot = document.getElementById('website');
 
       const validate = () => {
         const okEmail = email.checkValidity();
@@ -322,8 +412,12 @@
         ev.preventDefault();
         validate();
         if(submitBtn.disabled) return;
-        // Demo: gerçek dünyada burada API çağrısı yapılır (rate limit + CSRF + bot koruması)
-        alert('Teşekkürler! Beta listesine kaydınız alındı.');
+        if(honeypot && honeypot.value) { return; } // bot ise sessizce iptal
+
+        // Üretimde burada CSRF korumalı bir POST çağrısı yapın.
+        // try { await fetch('/api/beta', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email: email.value.trim() }) }); } catch(e) {}
+        status.className = 'mt-2 text-sm text-emerald-400';
+        status.textContent = 'Teşekkürler! Beta listesine kaydınız alındı.';
         form.reset();
         validate();
       });
