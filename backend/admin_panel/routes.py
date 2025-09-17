@@ -5,19 +5,35 @@ import os
 import uuid
 from datetime import datetime, timedelta
 
-from flask import current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from loguru import logger
-from sqlalchemy import func, text
+from sqlalchemy import and_, func, or_, text
 
 from backend.auth.middlewares import admin_required as _admin_required
-from backend.db.models import (ABHData, AdminSettings, DBHData, PromoCode,
-                               SubscriptionPlan, SubscriptionPlanModel, User,
-                               UserRole, db)
+from backend.core.redis_manager import redis_manager
+from backend.db.models import (
+    ABHData,
+    AdminSettings,
+    AuditEvent,
+    DBHData,
+    PromoCode,
+    PromotionCode,
+    RateLimitHit,
+    SubscriptionPlan,
+    SubscriptionPlanModel,
+    UsageLog,
+    User,
+    UserRole,
+    db,
+)
 from backend.utils.audit import log_action
+from backend.utils.decorators import requires_admin
 from backend.utils.rbac import require_permission
 
 from . import admin_bp
+
+admin_console_bp = Blueprint("admin_console", __name__, url_prefix="/api/admin/console")
 
 
 def admin_required(f):
@@ -129,8 +145,9 @@ def update_user_details(user_id):
                     user.subscription_end = datetime.utcnow() + timedelta(
                         days=7
                     )  # Yeni deneme süresi
-                # Eğer Basic'e çekilirse subscription_end'i null yapabiliriz veya mevcut süreyi koruyabiliriz.
-                # user.subscription_end = None # Eğer Basic'e çekiliyorsa süresiz yapma
+                # Eğer Basic'e çekilirse subscription_end'i null yapabiliriz
+                # veya mevcut süreyi koruyabiliriz.
+                # user.subscription_end = None  # Eğer Basic'e çekiliyorsa süresiz yapma
             except KeyError:
                 return jsonify({"error": "Geçersiz abonelik seviyesi."}), 400
 
@@ -186,8 +203,9 @@ def add_coin():
     if not all([coin_id, coin_name, coin_symbol]):
         return jsonify({"error": "Coin ID, ad ve sembol gerekli."}), 400
 
-    # Gerçek implementasyonda, burada yeni coini veritabanına kaydedebilir (yeni bir Coin modeli olabilir),
-    # ve backend'in veri toplama sürecini bu yeni coin için başlatabilirsiniz.
+    # Gerçek implementasyonda, burada yeni coini veritabanına kaydedebilir
+    # (yeni bir Coin modeli olabilir) ve backend'in veri toplama sürecini
+    # bu yeni coin için başlatabilirsiniz.
     logger.info(f"Yeni coin ekleme talebi: {coin_name} ({coin_id})")
     return jsonify(
         {"message": f"Coin '{coin_name}' başarıyla eklendi (Simüle edildi)."}
@@ -206,7 +224,10 @@ def manage_website_background():
             url = (
                 setting.setting_value
                 if setting
-                else "https://www.coinkolik.com/wp-content/uploads/2023/12/gunun-one-cikan-kripto-paralari-30-aralik-2023.jpg"
+                else (
+                    "https://www.coinkolik.com/wp-content/uploads/2023/12/"
+                    "gunun-one-cikan-kripto-paralari-30-aralik-2023.jpg"
+                )
             )  # Varsayılan URL
             return jsonify({"homepage_background_url": url}), 200
         elif request.method == "POST":
@@ -475,13 +496,20 @@ def apply_promo_code():
             code.is_active = False
 
         db.session.commit()
+        # Loguru, {} yer tutucu ile formatlar (veya f-string kullanın)
         logger.info(
-            f"Promosyon kodu '{promo_code}' kullanıcı {user.username} için uygulandı. Yeni plan: {user.subscription_level.value}."
+            "Promosyon kodu '{}' kullanıcı {} için uygulandı. Yeni plan: {}.",
+            promo_code,
+            user.username,
+            user.subscription_level.value,
         )
         return (
             jsonify(
                 {
-                    "message": f"Promosyon kodu başarıyla uygulandı. Yeni planınız: {user.subscription_level.value.upper()}.",
+                    "message": (
+                        "Promosyon kodu başarıyla uygulandı. Yeni planınız: "
+                        f"{user.subscription_level.value.upper()}."
+                    ),
                     "new_plan": user.subscription_level.value,
                 }
             ),
@@ -607,3 +635,674 @@ def limit_usage():
         )
         stats = [dict(row) for row in results]
         return jsonify({"stats": stats}), 200
+
+
+# ---------------------------------------------------------------------------
+# Admin Console API (JWT protected endpoints under /api/admin/console)
+# ---------------------------------------------------------------------------
+
+
+def _ac_str(value, maxlen=200):
+    if value is None:
+        return None
+    return str(value).strip()[:maxlen]
+
+
+def _ac_int(value, default=None, minv=None, maxv=None):
+    try:
+        ivalue = int(value)
+    except Exception:
+        return default
+    if minv is not None and ivalue < minv:
+        return default
+    if maxv is not None and ivalue > maxv:
+        return default
+    return ivalue
+
+
+def _ac_bool(value, default=None):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        lowered = value.lower()
+        if lowered in {"true", "1", "yes", "on"}:
+            return True
+        if lowered in {"false", "0", "no", "off"}:
+            return False
+    return default
+
+
+def _ac_emit_audit(event_type, target_user_id=None, meta=None):
+    admin_user = getattr(g, "user", None)
+    try:
+        event = AuditEvent(
+            event_type=event_type,
+            actor_user_id=getattr(admin_user, "id", None),
+            target_user_id=target_user_id,
+            ip=request.headers.get("X-Forwarded-For", request.remote_addr),
+            user_agent=request.headers.get("User-Agent"),
+            meta=meta or {},
+        )
+        db.session.add(event)
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        logger.warning("[admin-console] audit emit failed: %s", exc)
+
+
+def _ac_plan_name(user: User) -> str:
+    plan_attr = getattr(user, "subscription_level", None)
+    if hasattr(plan_attr, "name"):
+        return plan_attr.name.lower()
+    if isinstance(plan_attr, str):
+        return plan_attr.lower()
+    return "trial"
+
+
+def _ac_get_usage_for_user(user_id: int) -> int:
+    try:
+        start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        return (
+            UsageLog.query.filter(
+                and_(UsageLog.user_id == user_id, UsageLog.timestamp >= start)
+            ).count()
+        )
+    except Exception:
+        return 0
+
+
+def _ac_calc_thresholds(used, limit_value):
+    if not limit_value or limit_value <= 0:
+        return 0, None
+    pct = int((used / float(limit_value)) * 100) if limit_value else 0
+    if pct >= 100:
+        return pct, "100"
+    if pct >= 90:
+        return pct, "90"
+    if pct >= 75:
+        return pct, "75"
+    return pct, None
+
+
+DEFAULT_LIMITS = {
+    "trial": 100,
+    "basic": 1000,
+    "advanced": 5000,
+    "premium": 20000,
+}
+
+
+@admin_console_bp.get("/users")
+@requires_admin
+def console_list_users():
+    query = _ac_str(request.args.get("query"), 120)
+    page = _ac_int(request.args.get("page"), default=1, minv=1)
+    size = _ac_int(request.args.get("size"), default=20, minv=1, maxv=200)
+
+    base_query = User.query
+    if query:
+        like = f"%{query}%"
+        base_query = base_query.filter(
+            or_(User.email.ilike(like), User.username.ilike(like))
+        )
+
+    items = base_query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=size, error_out=False
+    )
+
+    def _serialize(user: User) -> dict:
+        plan = _ac_plan_name(user)
+        created_at = getattr(user, "created_at", None)
+        if created_at:
+            created_str = created_at.isoformat()
+        else:
+            created_str = None
+        return {
+            "id": user.id,
+            "email": getattr(user, "email", None),
+            "name": getattr(user, "username", None),
+            "role": (user.role.value if isinstance(user.role, UserRole) else str(user.role)),
+            "plan": plan,
+            "is_locked": not getattr(user, "is_active", True),
+            "created_at": created_str,
+        }
+
+    return (
+        jsonify(
+            {
+                "items": [_serialize(user) for user in items.items],
+                "page": items.page,
+                "pages": items.pages,
+                "total": items.total,
+            }
+        ),
+        200,
+    )
+
+
+@admin_console_bp.patch("/users/<int:user_id>/lock")
+@requires_admin
+def console_lock_user(user_id: int):
+    payload = request.get_json(silent=True) or {}
+    locked = _ac_bool(payload.get("locked"), None)
+    if locked is None:
+        return jsonify({"error": "locked must be boolean"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not_found"}), 404
+
+    try:
+        user.is_active = not bool(locked)
+        db.session.commit()
+        _ac_emit_audit(
+            "lock" if locked else "unlock",
+            target_user_id=user.id,
+            meta={"locked": bool(locked)},
+        )
+        return jsonify({"ok": True, "is_locked": bool(locked)}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+@admin_console_bp.delete("/users/<int:user_id>")
+@requires_admin
+def console_delete_user(user_id: int):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not_found"}), 404
+
+    try:
+        db.session.delete(user)
+        db.session.commit()
+        _ac_emit_audit("user_delete", target_user_id=user_id)
+        return jsonify({"ok": True}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+@admin_console_bp.patch("/users/<int:user_id>/role")
+@requires_admin
+def console_change_role(user_id: int):
+    payload = request.get_json(silent=True) or {}
+    role_value = (_ac_str(payload.get("role")) or "").upper()
+    if role_value not in UserRole.__members__:
+        return jsonify({"error": "invalid_role"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not_found"}), 404
+
+    try:
+        user.role = UserRole[role_value]
+        db.session.commit()
+        _ac_emit_audit(
+            "role_change",
+            target_user_id=user.id,
+            meta={
+                "role": (
+                    user.role.value
+                    if isinstance(user.role, UserRole)
+                    else role_value.lower()
+                )
+            },
+        )
+        return jsonify({"ok": True, "role": user.role.value}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+_PLAN_MAP = {
+    "free": SubscriptionPlan.TRIAL,
+    "trial": SubscriptionPlan.TRIAL,
+    "basic": SubscriptionPlan.BASIC,
+    "advanced": SubscriptionPlan.ADVANCED,
+    "pro": SubscriptionPlan.ADVANCED,
+    "premium": SubscriptionPlan.PREMIUM,
+}
+
+
+@admin_console_bp.patch("/users/<int:user_id>/plan")
+@requires_admin
+def console_change_plan(user_id: int):
+    payload = request.get_json(silent=True) or {}
+    plan_value = (_ac_str(payload.get("plan")) or "").lower()
+    if plan_value not in _PLAN_MAP:
+        return jsonify({"error": "invalid_plan"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not_found"}), 404
+
+    try:
+        user.subscription_level = _PLAN_MAP[plan_value]
+        db.session.commit()
+        _ac_emit_audit(
+            "plan_change",
+            target_user_id=user.id,
+            meta={"plan": user.subscription_level.name.lower()},
+        )
+        return jsonify({"ok": True, "plan": user.subscription_level.name.lower()}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+@admin_console_bp.get("/limits/status")
+@requires_admin
+def console_limit_status():
+    user_id = _ac_int(request.args.get("user_id"), None, minv=1)
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not_found"}), 404
+
+    plan_name = _ac_plan_name(user)
+    limit_value = DEFAULT_LIMITS.get(plan_name, DEFAULT_LIMITS["trial"])
+    used = _ac_get_usage_for_user(user.id)
+    pct, level = _ac_calc_thresholds(used, limit_value)
+    return (
+        jsonify(
+            {
+                "user_id": user.id,
+                "plan": plan_name,
+                "used": used,
+                "limit": limit_value,
+                "percent": pct,
+                "alert_level": level,
+            }
+        ),
+        200,
+    )
+
+
+@admin_console_bp.get("/limits/alerts")
+@requires_admin
+def console_limit_alerts():
+    users = User.query.order_by(User.id.asc()).limit(1000).all()
+    items = []
+    for user in users:
+        plan_name = _ac_plan_name(user)
+        limit_value = DEFAULT_LIMITS.get(plan_name, DEFAULT_LIMITS["trial"])
+        used = _ac_get_usage_for_user(user.id)
+        pct, level = _ac_calc_thresholds(used, limit_value)
+        if level:
+            items.append(
+                {
+                    "user_id": user.id,
+                    "email": getattr(user, "email", None),
+                    "plan": plan_name,
+                    "used": used,
+                    "limit": limit_value,
+                    "percent": pct,
+                    "level": level,
+                }
+            )
+    return jsonify({"items": items}), 200
+
+
+def _ac_validate_promocode_payload(payload, partial=False):
+    errors = []
+    code_val = _ac_str(payload.get("code"))
+    if not partial:
+        if not code_val or len(code_val) < 3 or len(code_val) > 40:
+            errors.append("code must be 3-40 characters long")
+    discount = payload.get("discount_percent")
+    if discount is not None:
+        if _ac_int(discount, None, 0, 100) is None:
+            errors.append("discount_percent must be between 0 and 100")
+    bonus = payload.get("bonus_days")
+    if bonus is not None:
+        if _ac_int(bonus, None, 0, 3650) is None:
+            errors.append("bonus_days must be 0..3650")
+    max_uses = payload.get("max_uses")
+    if max_uses is not None and _ac_int(max_uses, None, 1) is None:
+        errors.append("max_uses must be >=1")
+    active = payload.get("active")
+    if active is not None and _ac_bool(active, None) is None:
+        errors.append("active must be boolean")
+    for key in ("valid_from", "valid_until"):
+        if key in payload and payload.get(key):
+            try:
+                datetime.fromisoformat(str(payload[key]))
+            except Exception:
+                errors.append(f"{key} must be ISO8601 datetime")
+    return errors
+
+
+def _ac_promocode_to_dict(promo: PromotionCode) -> dict:
+    return {
+        "id": promo.id,
+        "code": promo.code,
+        "description": promo.description,
+        "discount_percent": (
+            int(promo.discount_amount)
+            if promo.discount_type == "percent" and promo.discount_amount is not None
+            else None
+        ),
+        "bonus_days": promo.active_days,
+        "max_uses": promo.usage_limit,
+        "used_count": promo.usage_count,
+        "active": promo.is_active,
+        "valid_from": promo.valid_from.isoformat() if promo.valid_from else None,
+        "valid_until": promo.valid_until.isoformat() if promo.valid_until else None,
+    }
+
+
+@admin_console_bp.post("/promo-codes")
+@requires_admin
+def console_create_promocode():
+    payload = request.get_json(silent=True) or {}
+    errors = _ac_validate_promocode_payload(payload, partial=False)
+    if errors:
+        return jsonify({"error": "validation", "details": errors}), 400
+
+    code = _ac_str(payload.get("code"), 40)
+    if not code:
+        return jsonify({"error": "validation", "details": ["code required"]}), 400
+    code = code.upper()
+
+    if PromotionCode.query.filter(func.upper(PromotionCode.code) == code).first():
+        return jsonify({"error": "code_exists"}), 409
+
+    promo = PromotionCode(
+        code=code,
+        description=_ac_str(payload.get("description"), 200),
+        promo_type=payload.get("promo_type", "generic"),
+        discount_type="percent"
+        if payload.get("discount_percent") is not None
+        else None,
+        discount_amount=_ac_int(payload.get("discount_percent"), None, 0, 100),
+        active_days=_ac_int(payload.get("bonus_days"), None, 0, 3650),
+        usage_limit=_ac_int(payload.get("max_uses"), 1, 1),
+        usage_count=0,
+        is_active=_ac_bool(payload.get("active"), True),
+    )
+
+    valid_from = _ac_str(payload.get("valid_from"))
+    valid_until = _ac_str(payload.get("valid_until"))
+    try:
+        if valid_from:
+            promo.valid_from = datetime.fromisoformat(valid_from)
+        if valid_until:
+            promo.valid_until = datetime.fromisoformat(valid_until)
+        db.session.add(promo)
+        db.session.commit()
+        _ac_emit_audit("promo_create", meta={"code": promo.code})
+        return jsonify({"ok": True, "id": promo.id, "code": promo.code}), 201
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+@admin_console_bp.get("/promo-codes")
+@requires_admin
+def console_list_promocodes():
+    active_param = request.args.get("active")
+    query = _ac_str(request.args.get("query"), 120)
+    page = _ac_int(request.args.get("page"), default=1, minv=1)
+    size = _ac_int(request.args.get("size"), default=20, minv=1, maxv=200)
+
+    promo_query = PromotionCode.query
+    if active_param is not None:
+        active_val = _ac_bool(active_param, None)
+        if active_val is None:
+            return jsonify({"error": "active must be boolean"}), 400
+        promo_query = promo_query.filter(PromotionCode.is_active == active_val)
+
+    if query:
+        like = f"%{query.upper()}%"
+        promo_query = promo_query.filter(func.upper(PromotionCode.code).like(like))
+
+    items = promo_query.order_by(PromotionCode.created_at.desc()).paginate(
+        page=page, per_page=size, error_out=False
+    )
+
+    return (
+        jsonify(
+            {
+                "items": [_ac_promocode_to_dict(promo) for promo in items.items],
+                "page": items.page,
+                "pages": items.pages,
+                "total": items.total,
+            }
+        ),
+        200,
+    )
+
+
+@admin_console_bp.patch("/promo-codes/<int:promo_id>")
+@requires_admin
+def console_update_promocode(promo_id: int):
+    promo = PromotionCode.query.get(promo_id)
+    if not promo:
+        return jsonify({"error": "not_found"}), 404
+
+    payload = request.get_json(silent=True) or {}
+    errors = _ac_validate_promocode_payload(payload, partial=True)
+    if errors:
+        return jsonify({"error": "validation", "details": errors}), 400
+
+    try:
+        if "code" in payload:
+            new_code = _ac_str(payload.get("code"), 40)
+            if new_code:
+                new_code = new_code.upper()
+                existing = None
+                if new_code != promo.code:
+                    existing = (
+                        PromotionCode.query.filter(
+                            func.upper(PromotionCode.code) == new_code
+                        ).first()
+                    )
+                if existing:
+                    return jsonify({"error": "code_exists"}), 409
+                promo.code = new_code
+        if "description" in payload:
+            promo.description = _ac_str(payload.get("description"), 200)
+        if "discount_percent" in payload:
+            promo.discount_type = (
+                "percent" if payload.get("discount_percent") is not None else None
+            )
+            promo.discount_amount = _ac_int(payload.get("discount_percent"), None, 0, 100)
+        if "bonus_days" in payload:
+            promo.active_days = _ac_int(payload.get("bonus_days"), None, 0, 3650)
+        if "max_uses" in payload:
+            promo.usage_limit = _ac_int(payload.get("max_uses"), 1, 1)
+        if "active" in payload:
+            promo.is_active = _ac_bool(payload.get("active"), promo.is_active)
+        if "valid_from" in payload:
+            vf = _ac_str(payload.get("valid_from"))
+            promo.valid_from = datetime.fromisoformat(vf) if vf else None
+        if "valid_until" in payload:
+            vu = _ac_str(payload.get("valid_until"))
+            promo.valid_until = datetime.fromisoformat(vu) if vu else None
+        db.session.commit()
+        _ac_emit_audit("promo_update", meta={"id": promo_id})
+        return jsonify({"ok": True}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+@admin_console_bp.post("/promo-codes/<int:promo_id>/activate")
+@requires_admin
+def console_activate_promocode(promo_id: int):
+    payload = request.get_json(silent=True) or {}
+    active_val = _ac_bool(payload.get("active"), None)
+    if active_val is None:
+        return jsonify({"error": "active must be boolean"}), 400
+
+    promo = PromotionCode.query.get(promo_id)
+    if not promo:
+        return jsonify({"error": "not_found"}), 404
+
+    try:
+        promo.is_active = active_val
+        db.session.commit()
+        _ac_emit_audit("promo_activate", meta={"id": promo_id, "active": active_val})
+        return jsonify({"ok": True, "active": active_val}), 200
+    except Exception as exc:
+        db.session.rollback()
+        return jsonify({"error": "db_error", "detail": str(exc)}), 500
+
+
+@admin_console_bp.get("/health")
+@requires_admin
+def console_health():
+    status = {"db": "unknown", "redis": "unknown", "celery": "unknown"}
+
+    try:
+        db.session.execute(text("SELECT 1"))
+        status["db"] = "ok"
+    except Exception:
+        status["db"] = "fail"
+
+    try:
+        redis_client = getattr(redis_manager, "client", None)
+        if redis_client and redis_client.ping():
+            status["redis"] = "ok"
+        else:
+            status["redis"] = "unavailable"
+    except Exception:
+        status["redis"] = "unavailable"
+
+    try:
+        try:
+            from backend.tasks import celery_app
+        except Exception:
+            from backend.celery_app import celery_app  # type: ignore
+
+        if celery_app:
+            insp = celery_app.control.inspect(timeout=1)
+            active = insp.active() or {}
+            status["celery"] = "ok" if isinstance(active, dict) else "fail"
+        else:
+            status["celery"] = "unavailable"
+    except Exception:
+        status["celery"] = "unavailable"
+
+    return jsonify(status), 200
+
+
+@admin_console_bp.get("/queue")
+@requires_admin
+def console_queue_state():
+    response = {"active": 0, "reserved": 0, "scheduled": 0}
+    try:
+        try:
+            from backend.tasks import celery_app
+        except Exception:
+            from backend.celery_app import celery_app  # type: ignore
+
+        if celery_app:
+            insp = celery_app.control.inspect(timeout=1)
+            active = insp.active() or {}
+            reserved = insp.reserved() or {}
+            scheduled = insp.scheduled() or {}
+            response["active"] = (
+                sum(len(v) for v in active.values()) if isinstance(active, dict) else 0
+            )
+            response["reserved"] = (
+                sum(len(v) for v in reserved.values())
+                if isinstance(reserved, dict)
+                else 0
+            )
+            response["scheduled"] = (
+                sum(len(v) for v in scheduled.values())
+                if isinstance(scheduled, dict)
+                else 0
+            )
+        else:
+            response["error"] = "unavailable"
+    except Exception:
+        response["error"] = "unavailable"
+
+    return jsonify(response), 200
+
+
+@admin_console_bp.get("/security/events")
+@requires_admin
+def console_security_events():
+    event_type = _ac_str(request.args.get("type"))
+    since_raw = _ac_str(request.args.get("since"))
+    page = _ac_int(request.args.get("page"), default=1, minv=1)
+    size = _ac_int(request.args.get("size"), default=50, minv=1, maxv=200)
+
+    query = AuditEvent.query
+    if event_type:
+        query = query.filter(AuditEvent.event_type == event_type)
+    if since_raw:
+        try:
+            since_dt = datetime.fromisoformat(since_raw)
+            query = query.filter(AuditEvent.occurred_at >= since_dt)
+        except Exception:
+            return jsonify({"error": "invalid_since"}), 400
+
+    items = query.order_by(AuditEvent.occurred_at.desc()).paginate(
+        page=page, per_page=size, error_out=False
+    )
+
+    results = []
+    for event in items.items:
+        results.append(
+            {
+                "id": event.id,
+                "occurred_at": event.occurred_at.isoformat(),
+                "event_type": event.event_type,
+                "actor_user_id": event.actor_user_id,
+                "target_user_id": event.target_user_id,
+                "ip": event.ip,
+                "user_agent": event.user_agent,
+                "meta": event.meta,
+            }
+        )
+
+    return (
+        jsonify(
+            {
+                "items": results,
+                "page": items.page,
+                "pages": items.pages,
+                "total": items.total,
+            }
+        ),
+        200,
+    )
+
+
+@admin_console_bp.get("/security/ratelimit-hits")
+@requires_admin
+def console_security_rate_limits():
+    days = _ac_int(request.args.get("days"), default=7, minv=1, maxv=90)
+    since = datetime.utcnow() - timedelta(days=days)
+
+    rows = (
+        db.session.query(
+            func.date(RateLimitHit.occurred_at).label("day"),
+            RateLimitHit.route,
+            func.sum(RateLimitHit.count).label("hits"),
+        )
+        .filter(RateLimitHit.occurred_at >= since)
+        .group_by(func.date(RateLimitHit.occurred_at), RateLimitHit.route)
+        .order_by(func.date(RateLimitHit.occurred_at).desc())
+        .all()
+    )
+
+    return (
+        jsonify(
+            {
+                "items": [
+                    {"day": str(row.day), "route": row.route, "hits": int(row.hits)}
+                    for row in rows
+                ],
+                "since": since.isoformat(),
+            }
+        ),
+        200,
+    )

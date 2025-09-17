@@ -2,9 +2,9 @@ import uuid
 from datetime import date, datetime, timedelta
 from enum import Enum
 
-from sqlalchemy import JSON, Boolean, Column, Date, DateTime
+from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Index
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import Float, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import Float, ForeignKey, Integer, String, Table, Text, inspect
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # SQLAlchemy instance uygulama genelinde 'backend.db' paketinde tanımlıdır.
@@ -476,6 +476,8 @@ class PromotionCode(db.Model):
     custom_users = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True, nullable=False)
+    valid_from = Column(DateTime, nullable=True)
+    valid_until = Column(DateTime, nullable=True)
 
     def to_dict(self):
         return {
@@ -672,6 +674,23 @@ class AuditLog(db.Model):
     user = db.relationship("User", backref="audit_logs", lazy=True)
 
 
+class AuditEvent(db.Model):
+    """Minimal admin audit trail for security-sensitive operations."""
+
+    __tablename__ = "audit_events"
+
+    id = Column(Integer, primary_key=True)
+    occurred_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    event_type = Column(String(64), nullable=False, index=True)
+    actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    ip = Column(String(64), nullable=True)
+    user_agent = Column(String(256), nullable=True)
+    meta = Column(JSON, nullable=True)
+
+    __table_args__ = (Index("ix_audit_event_type_time", "event_type", "occurred_at"),)
+
+
 class UsageLog(db.Model):
     __tablename__ = "usage_logs"
 
@@ -706,6 +725,19 @@ class DailyUsage(db.Model):
             "user_id", "feature_key", "usage_date", name="_user_feature_date_uc"
         ),
     )
+
+
+class RateLimitHit(db.Model):
+    __tablename__ = "rate_limit_hits"
+
+    id = Column(Integer, primary_key=True)
+    occurred_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    route = Column(String(128), nullable=False, index=True)
+    ip = Column(String(64), nullable=True)
+    user_agent = Column(String(256), nullable=True)
+    count = Column(Integer, nullable=False, default=1)
+
+    __table_args__ = (Index("ix_rl_route_time", "route", "occurred_at"),)
 
 
 # --- DRAKS tablolari ---
@@ -798,3 +830,33 @@ class SystemSetting(db.Model):
     category = Column(String(50))
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+def ensure_admin_support_tables(app=None) -> None:
+    """Create auxiliary admin tables when migrations are not executed."""
+
+    engine = None
+    try:
+        if app is not None:
+            engine = db.get_engine(app)
+        else:
+            engine = db.engine
+    except Exception:
+        try:
+            from flask import current_app
+
+            engine = db.get_engine(current_app)  # type: ignore[arg-type]
+        except Exception:
+            engine = None
+
+    if engine is None:
+        return
+
+    inspector = inspect(engine)
+    for table in (AuditEvent.__table__, RateLimitHit.__table__):
+        try:
+            if not inspector.has_table(table.name):
+                table.create(bind=engine, checkfirst=True)
+        except Exception:
+            # Table creation failures shouldn't block app startup
+            continue

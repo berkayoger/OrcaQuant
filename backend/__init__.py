@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -283,6 +283,14 @@ def create_app(config_name: str = None) -> Flask:
         pass
     db.init_app(app)
 
+    with app.app_context():
+        try:
+            from .db.models import ensure_admin_support_tables
+
+            ensure_admin_support_tables(app)
+        except Exception as exc:
+            logger.warning(f"Admin support tables check skipped: {exc}")
+
     # Initialize cache
     _init_cache(app)
 
@@ -290,7 +298,33 @@ def create_app(config_name: str = None) -> Flask:
     limiter.default_limits = ["200 per day", "50 per hour"]
     limiter.storage_uri = app.config.get('REDIS_URL', 'memory://')
     limiter.init_app(app)
-    
+    # Log rate-limit hits and return JSON error responses
+    try:
+        from flask_limiter import RateLimitExceeded
+        from backend.db import db as _db
+        from backend.db.models import RateLimitHit as _RateLimitHit
+
+        @app.errorhandler(RateLimitExceeded)
+        def _on_rate_limit_exceeded(exc: RateLimitExceeded):
+            try:
+                _db.session.add(
+                    _RateLimitHit(
+                        route=request.endpoint or request.path,
+                        ip=request.headers.get("X-Forwarded-For", request.remote_addr),
+                        user_agent=request.headers.get("User-Agent"),
+                        count=1,
+                    )
+                )
+                _db.session.commit()
+            except Exception:
+                _db.session.rollback()
+            return (
+                jsonify({"error": "rate_limited", "detail": str(exc)}),
+                429,
+            )
+    except Exception:
+        pass
+
     # Register blueprints
     register_blueprints(app)
 
@@ -625,8 +659,11 @@ def register_blueprints(app: Flask):
     
     # Admin Panel Blueprint (non-API UI, optional)
     try:
-        from .admin_panel import admin_bp
+        from .admin_panel import admin_bp, admin_console_bp
+
         app.register_blueprint(admin_bp, url_prefix='/admin')
+        if admin_console_bp:
+            app.register_blueprint(admin_console_bp)
     except Exception:
         pass
 
