@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from flask import Flask
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -298,7 +298,33 @@ def create_app(config_name: str = None) -> Flask:
     limiter.default_limits = ["200 per day", "50 per hour"]
     limiter.storage_uri = app.config.get('REDIS_URL', 'memory://')
     limiter.init_app(app)
-    
+    # Log rate-limit hits and return JSON error responses
+    try:
+        from flask_limiter import RateLimitExceeded
+        from backend.db import db as _db
+        from backend.db.models import RateLimitHit as _RateLimitHit
+
+        @app.errorhandler(RateLimitExceeded)
+        def _on_rate_limit_exceeded(exc: RateLimitExceeded):
+            try:
+                _db.session.add(
+                    _RateLimitHit(
+                        route=request.endpoint or request.path,
+                        ip=request.headers.get("X-Forwarded-For", request.remote_addr),
+                        user_agent=request.headers.get("User-Agent"),
+                        count=1,
+                    )
+                )
+                _db.session.commit()
+            except Exception:
+                _db.session.rollback()
+            return (
+                jsonify({"error": "rate_limited", "detail": str(exc)}),
+                429,
+            )
+    except Exception:
+        pass
+
     # Register blueprints
     register_blueprints(app)
 

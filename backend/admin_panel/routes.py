@@ -496,8 +496,9 @@ def apply_promo_code():
             code.is_active = False
 
         db.session.commit()
+        # Loguru, {} yer tutucu ile formatlar (veya f-string kullanın)
         logger.info(
-            "Promosyon kodu '%s' kullanıcı %s için uygulandı. Yeni plan: %s.",
+            "Promosyon kodu '{}' kullanıcı {} için uygulandı. Yeni plan: {}.",
             promo_code,
             user.username,
             user.subscription_level.value,
@@ -1172,7 +1173,10 @@ def console_health():
         status["redis"] = "unavailable"
 
     try:
-        from backend.tasks import celery_app
+        try:
+            from backend.tasks import celery_app
+        except Exception:
+            from backend.celery_app import celery_app  # type: ignore
 
         if celery_app:
             insp = celery_app.control.inspect(timeout=1)
@@ -1191,7 +1195,10 @@ def console_health():
 def console_queue_state():
     response = {"active": 0, "reserved": 0, "scheduled": 0}
     try:
-        from backend.tasks import celery_app
+        try:
+            from backend.tasks import celery_app
+        except Exception:
+            from backend.celery_app import celery_app  # type: ignore
 
         if celery_app:
             insp = celery_app.control.inspect(timeout=1)
