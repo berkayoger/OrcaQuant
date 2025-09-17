@@ -10,7 +10,7 @@
   <meta property="og:title" content="OrcaQuant - DeFi'de Kaybolmayın, Bilinçli Hareket Edin" />
   <meta property="og:description" content="DeFi dünyası karmaşık ve riskli. Biz araçları sunuyoruz; karar sizden." />
   <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://i.pinimg.com/736x/16/07/82/1607826d5234d390f4feef3c4a2c5d83.jpg" />
+  <meta property="og:image" content="https://i.pinimg.com/736x/76/3a/e7/763ae7f679dd57779c9c9560509d1fe3.jpg" />
   <meta property="og:locale" content="tr_TR" />
   <meta name="twitter:card" content="summary_large_image" />
 
@@ -23,11 +23,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Görsel performansı: hero görselini preload -->
-  <link rel="preload" as="image" href="https://i.pinimg.com/736x/16/07/82/1607826d5234d390f4feef3c4a2c5d83.jpg" />
+  <link rel="preload" as="image" href="https://i.pinimg.com/736x/76/3a/e7/763ae7f679dd57779c9c9560509d1fe3.jpg" />
   <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
 
   <style>
-    :root { --section-bg: #0b0b0b; --site-bg-image: url('https://i.pinimg.com/736x/16/07/82/1607826d5234d390f4feef3c4a2c5d83.jpg'); }
+    :root { --section-bg: #0b0b0b; --site-bg-image: url('https://i.pinimg.com/736x/76/3a/e7/763ae7f679dd57779c9c9560509d1fe3.jpg'); }
     html { scroll-behavior: smooth; }
     body { background:#000; color:#F5F5F7; font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
     .sticky-blur { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); background: rgba(0,0,0,.6); }
@@ -64,10 +64,27 @@
     @media (max-width: 768px){
       body::before{ background-attachment:scroll; }
     }
-  </style>
+    /* ==== HERO Scroll-Scrub Video (yalnızca ilk başlık bölümü) ==== */
+  .oq-hero-section{ height:100vh; }
+  @media (max-width:768px){ .oq-hero-section{ height:100vh; } .oq-hero-video{ display:none; } }
+  .oq-hero-video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:-9; pointer-events:none; filter:saturate(1.05) contrast(1.05); will-change: transform; }
+  .oq-hero-sticky{ position:sticky; top:112px; }
+  @media (max-width:768px){ .oq-hero-sticky{ top:96px; } }
+  @media (prefers-reduced-motion: reduce){ .oq-hero-video{ display:none; } }
+  /* === Perf: aşağıdaki bölümlerde incremental render === */
+  section.anchor-offset{ content-visibility:auto; contain-intrinsic-size:800px; }
+  @media (max-width:768px){ section.anchor-offset{ contain-intrinsic-size:900px; } }
+
+  /* === Mikro etkileşimler === */
+  .card{ transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+  @media (prefers-reduced-motion: no-preference){ .card:hover{ transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,.25); } }
+  .card:focus-within{ outline:2px solid #60a5fa33; outline-offset:2px; }
+  @media (prefers-reduced-motion: no-preference){ a.bg-blue-600:hover, button.bg-blue-600:hover{ transform: translateY(-1px); } }
+</style>
 
   <!-- Güvenlik notu (Sunucu başlıkları önerilir):
   Content-Security-Policy, Referrer-Policy, X-Frame-Options, Permissions-Policy gibi başlıkları backend/proxy tarafında ekleyin. CDN scriptleri için nonce/sha256 gerekir. -->
+  <link rel="preload" as="image" href="/poster.webp" />
 </head>
 <body>
   <a href="#main" class="skip-link">İçeriğe atla</a>
@@ -97,28 +114,40 @@
         <a class="text-gray-300 hover:text-white" href="#riskler" data-section="riskler">Riskler Neler?</a>
         <a class="text-gray-300 hover:text-white" href="#topluluk" data-section="topluluk">Topluluk</a>
       </div>
-      <a class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-full" href="#basla" data-section="basla">Hemen Başla</a>
+      <a class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-full" href="#basla" data-section="basla">Beta Erişimi Al</a>
     </nav>
   </header>
+<!-- Scroll ilerleme çubuğu -->
+<div id="scrollbar" role="progressbar" aria-label="Sayfa okuma ilerlemesi" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="position:sticky;top:0;height:3px;background:linear-gradient(90deg,#60a5fa,#22d3ee);transform-origin:0 50%;transform:scaleX(0);z-index:60;pointer-events:none"></div>
 
   <main id="main">
     <!-- HERO -->
-    <section class="relative overflow-hidden anchor-offset">
-      <picture class="absolute inset-0 -z-10">
-        <source srcset="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1920&auto=format&fit=crop">
-        <img class="inset-0 w-full h-full object-cover opacity-40" src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1920&auto=format&fit=crop" alt="" aria-hidden="true" fetchpriority="high" loading="eager" decoding="async"/>
-      </picture>
+    <section id="hero" class="relative overflow-hidden anchor-offset oq-hero-section">
+      <!-- HERO arka plan video (yalnızca bu bölümde scroll ile scrub) -->
+      <video id="oq-hero-video" class="oq-hero-video" muted playsinline preload="metadata" poster="/poster.webp">
+        <source src="/hero.webm" type="video/webm" />
+        <source src="/hero.mp4" type="video/mp4" />
+      </video>
       <div class="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_10%,rgba(59,130,246,.12),rgba(0,0,0,0))]"></div>
-      <div class="relative max-w-7xl mx-auto px-4 py-24 md:py-36">
-        <p class="kicker fade-in">DeFi Araştırma Platformu</p>
-        <h1 class="headline mt-3 fade-in">DeFi'de Kaybolmayın, Bilinçli Hareket Edin</h1>
-        <p class="subhead mt-6 max-w-3xl fade-in">DeFi dünyası karmaşık ve riskli. Size doğru araçları veriyor, kendi araştırmanızı yapabilmeniz için ihtiyacınız olan tüm bilgileri topluyoruz. Karar sizin, bilgi bizden.</p>
+      <div class="relative max-w-7xl mx-auto px-4 py-24 md:py-36 oq-hero-sticky">
+        <p class="kicker fade-in">Türkiye'nin İlk DeFi Araştırma Platformu</p>
+        <h1 class="headline mt-3 fade-in">DeFi'de Bilinçli Yatırım Yapın</h1>
+        <p class="subhead mt-6 max-w-3xl fade-in">Riskleri anlayın, doğru kararlar verin.</p>
+        <div class="mt-6 flex flex-wrap items-center gap-3 fade-in">
+          <a class="px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white" href="#basla" data-section="basla">Beta Erişimi Al</a>
+          <a class="px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white/90" href="#nasil-calisir" data-section="nasil-calisir">Nasıl Çalıştığını Gör</a>
+        </div>
+        <form id="heroBeta" class="mt-4 flex flex-col sm:flex-row gap-3 fade-in" novalidate>
+          <input type="email" required placeholder="e-posta adresiniz" class="px-4 py-3 rounded-lg bg-neutral-900 border border-white/10 outline-none focus:ring-2 focus:ring-blue-500 flex-1" />
+          <button type="submit" class="px-5 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 font-semibold">Beta Erişimi Al</button>
+          <span data-status aria-live="polite" role="status"></span>
+        </form>
+        <div class="mt-3 flex flex-wrap items-center gap-4 text-xs text-gray-400 fade-in">
+          <span>🔒 SSL & Veri Koruma</span>
+          <span>👥 5.120+ Beta Kullanıcı</span>
+        </div>
         <div class="mt-6 p-4 md:p-5 card fade-in">
           <p class="text-sm text-gray-300"><strong>Bu bir yatırım tavsiyesi platformu değil!</strong> Sadece araştırma yapmak için gereken araçları sunuyoruz. Kararları siz veriyorsunuz, sorumluluğu da siz alıyorsunuz.</p>
-        </div>
-        <div class="mt-8 flex flex-col sm:flex-row gap-3 fade-in">
-          <a href="#basla" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl text-center" data-section="basla">Araştırmaya Başla</a>
-          <a href="#riskler" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 py-3 rounded-xl text-center" data-section="riskler">Önce Riskleri Öğren</a>
         </div>
       </div>
     </section>
@@ -193,90 +222,51 @@
     </section>
 
     <!-- RİSK EĞİTİMİ -->
-    <section class="py-20 md:py-28 anchor-offset" id="riskler">
+    <section id="basla" class="py-20 md:py-28 anchor-offset">
       <div class="max-w-7xl mx-auto px-4">
-        <h2 class="headline text-3xl md:text-5xl fade-in">DeFi neden bu kadar riskli?</h2>
-        <p class="subhead mt-3 fade-in">Yatırım yapmadan önce mutlaka bilmeniz gereken riskler.</p>
-
-        <div class="card p-6 mt-8 fade-in border-yellow-500/30">
-          <p class="text-yellow-300 font-semibold">⚠️ EN ÖNEMLİ UYARI</p>
-          <p class="text-gray-200 mt-2">DeFi'de paranızın %100'ünü kaybetme ihtimaliniz her zaman var. Bu abartı değil, gerçek bir risk. Sadece tamamen kaybetmeyi göze alabileceğiniz parayla yatırım yapın.</p>
-        </div>
-
-        <div class="grid md:grid-cols-2 gap-6 mt-8">
-          <article class="card p-6 fade-in">
-            <h3 class="text-xl font-bold">🏗️ Kod Hatası Riski</h3>
-            <p class="text-gray-300 mt-2">DeFi protokolleri kod üzerine kurulu. Kodda hata varsa paranız kaybolabilir. (Örn: 2022'de Wormhole saldırısında ~320M$ kayıp raporlandı.)</p>
-            <p class="text-sm text-gray-400 mt-2">Korunma: Audit edilmiş protokoller, çoklu imza kasaları, fon dağıtımı.</p>
-          </article>
-          <article class="card p-6 fade-in">
-            <h3 class="text-xl font-bold">🔄 Impermanent Loss</h3>
-            <p class="text-gray-300 mt-2">Likidite sağladığınızda fiyat değişimlerinden dolayı sadece tutmaya göre kayıp yaşayabilirsiniz.</p>
-            <p class="text-sm text-gray-400 mt-2">Korunma: Stablecoin çiftleri, IL hesaplayıcıları, tek taraflı havuzlar.</p>
-          </article>
-          <article class="card p-6 fade-in">
-            <h3 class="text-xl font-bold">🏃‍♂️ Rug Pull Riski</h3>
-            <p class="text-gray-300 mt-2">Yetkili cüzdanların fonları çekmesi veya likiditenin boşaltılması.</p>
-            <p class="text-sm text-gray-400 mt-2">Korunma: Doxxed ekip, kilitli likidite, merkeziyetsiz yönetişim.</p>
-          </article>
-          <article class="card p-6 fade-in">
-            <h3 class="text-xl font-bold">💸 Likidite Riski</h3>
-            <p class="text-gray-300 mt-2">Pozisyonu kapatmak için yeterli derinlik olmayabilir; fiyat kayması yaşarsınız.</p>
-            <p class="text-sm text-gray-400 mt-2">Korunma: TVL yüksek havuzlar, slipaj limitleri, kademeli çıkış.</p>
-          </article>
-        </div>
-
-        <div class="card p-6 mt-8 fade-in border-red-500/30">
-          <h3 class="text-xl font-bold text-red-300">🚨 YASAL UYARI</h3>
-          <ul class="list-disc list-inside text-gray-300 mt-2 space-y-1">
-            <li>Yatırım tavsiyesi vermiyoruz; veriler "olduğu gibi" sunulur.</li>
-            <li>18 yaşından küçükseniz bu platformu kullanamazsınız.</li>
-            <li>Türkiye'de SPK düzenlemeleri gereği yatırım danışmanlığı lisanslı kurumlarca sağlanır.</li>
-            <li>Hiçbir kayıptan sorumlu değiliz.</li>
-          </ul>
-        </div>
-
-        <div class="card p-6 mt-8 fade-in">
-          <p class="text-gray-200"><strong>Peki neden DeFi?</strong> Çünkü riskli olmasına rağmen geleneksel finanstan daha şeffaf, erişilebilir ve potansiyel olarak kârlı. Ama bu riskleri bilerek, bilinçli şekilde girmeliyiz.</p>
-        </div>
+        <h2 class="headline text-3xl md:text-5xl fade-in">Başlamaya hazır mısınız?</h2>
+        <p class="subhead mt-3 fade-in">E-posta bırakın, beta erişimini açalım.</p>
+        <form id="betaForm" class="card p-6 mt-8 fade-in" novalidate>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="col-span-2 md:col-span-1">
+              <label class="text-sm text-gray-300" for="email">E-posta</label>
+              <input id="email" type="email" required class="mt-1 w-full px-4 py-3 rounded-lg bg-neutral-900 border border-white/10 outline-none focus:ring-2 focus:ring-blue-500" placeholder="sizin@eposta.com" />
+              <p id="emailError" class="mt-1 text-sm text-red-400 hidden" role="alert">Lütfen geçerli bir e-posta girin.</p>
+            </div>
+            <div class="col-span-2 md:col-span-1">
+              <label class="text-sm text-gray-300" for="name">Ad Soyad (opsiyonel)</label>
+              <input id="name" type="text" class="mt-1 w-full px-4 py-3 rounded-lg bg-neutral-900 border border-white/10 outline-none" />
+            </div>
+          </div>
+          <div class="mt-4 flex items-center gap-3">
+            <input id="age" type="checkbox" class="h-4 w-4" />
+            <label for="age" class="text-sm text-gray-300">18 yaşından büyüğüm ve gizlilik politikasını okudum.</label>
+          </div>
+          <input id="website" type="text" class="hidden" autocomplete="off" tabindex="-1" aria-hidden="true" />
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <button id="submitBtn" type="submit" class="px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white">Beta Erişimi Al</button>
+            <span id="formStatus" aria-live="polite" role="status"></span>
+            <span class="text-xs text-gray-400">🔒 Verinizi 3. taraflarla paylaşmıyoruz.</span>
+          </div>
+        </form>
       </div>
     </section>
 
-    <!-- NASIL BAŞLARIM -->
-    <section class="py-20 md:py-28 anchor-offset" id="basla">
+    <section id="riskler" class="py-20 md:py-28 anchor-offset">
       <div class="max-w-7xl mx-auto px-4">
-        <h2 class="headline text-3xl md:text-5xl fade-in">Nasıl başlarım?</h2>
-        <p class="subhead mt-3 fade-in">DeFi yolculuğunuza güvenli şekilde başlamanız için adım adım rehber.</p>
-
-        <div class="grid md:grid-cols-4 gap-6 mt-10">
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 1: Öğrenmeye Başla</h3><p class="text-gray-300 mt-2">Impermanent loss, yield farming, liquidity mining nedir?</p><a class="mt-3 inline-block text-blue-400" href="#araclar" data-section="araclar">Eğitim Merkezi →</a></div>
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 2: Küçük Başla</h3><p class="text-gray-300 mt-2">100–500 TL gibi kaybetmeyi göze alabileceğiniz miktarla başlayın.</p><a class="mt-3 inline-block text-blue-400" href="#">Başlangıç Rehberi →</a></div>
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 3: Araştır</h3><p class="text-gray-300 mt-2">Protokolleri tarayın, risk skorlarını inceleyin, karşılaştırın.</p><a class="mt-3 inline-block text-blue-400" href="#araclar" data-section="araclar">Protokol Tarayıcı →</a></div>
-          <div class="card p-6 fade-in"><h3 class="text-lg font-bold">Adım 4: Takip Et</h3><p class="text-gray-300 mt-2">Portföy izleyici ve uyarılarla değişikliklerden haberdar olun.</p><a class="mt-3 inline-block text-blue-400" href="#araclar" data-section="araclar">Portföy İzleyici →</a></div>
+        <h2 class="headline text-3xl md:text-5xl fade-in">DeFi Riskleri (Kısa Rehber)</h2>
+        <p class="subhead mt-3 fade-in">Bilmeden risk almak kumardır. Bilerek risk almak stratejidir.</p>
+        <div class="grid md:grid-cols-3 gap-6 mt-10">
+          <article class="card p-6 fade-in"><h3 class="text-xl font-bold">🧱 Akıllı Kontrat Riski</h3><p class="text-gray-300 mt-2">Kod hataları, oracle manipülasyonu, flash-loan saldırıları.</p></article>
+          <article class="card p-6 fade-in"><h3 class="text-xl font-bold">💧 Likidite Riski</h3><p class="text-gray-300 mt-2">Likidite çekilmesi, slippage, kilitli TVL volatilitesi.</p></article>
+          <article class="card p-6 fade-in"><h3 class="text-xl font-bold">⚖️ Piyasa & Rehincilik</h3><p class="text-gray-300 mt-2">Aşırı kaldıraç, likidasyon eşiği, impermanent loss.</p></article>
+          <article class="card p-6 fade-in"><h3 class="text-xl font-bold">👥 Ekip & Yönetişim</h3><p class="text-gray-300 mt-2">Anonim ekip, multisig, timelock, governance riskleri.</p></article>
+          <article class="card p-6 fade-in"><h3 class="text-xl font-bold">🧩 Zincir Riski</h3><p class="text-gray-300 mt-2">Köprü açıkları, L2 çıkış riskleri, konsensüs sorunları.</p></article>
+          <article class="card p-6 fade-in"><h3 class="text-xl font-bold">🪙 Tokenomik</h3><p class="text-gray-300 mt-2">Enflasyon, kilit açılış takvimi, teşvik yakıtlı getiri.</p></article>
         </div>
-
-        <!-- Beta Kayıt Formu -->
-        <div class="card p-6 mt-10 fade-in max-w-2xl">
-          <h3 class="text-2xl font-bold">Beta testi için kayıt olun</h3>
-          <p class="text-gray-300 mt-2">Platform henüz beta aşamasında. Ücretsiz erken erişim için e-postanızı bırakın, hazır olduğunda size haber verelim.</p>
-          <form id="betaForm" class="mt-6 space-y-4" novalidate>
-            <div class="hidden" aria-hidden="true">
-              <label for="website">Websiteniz (boş bırakın)</label>
-              <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
-            </div>
-            <div>
-              <label class="block text-sm text-gray-400 mb-1" for="email">E-posta</label>
-              <input id="email" name="email" type="email" inputmode="email" autocomplete="email" required placeholder="ornek@posta.com" class="w-full px-4 py-3 rounded-lg bg-neutral-900 border border-white/10 outline-none focus:ring-2 focus:ring-blue-500" />
-              <p id="emailError" class="mt-1 text-sm text-red-400 hidden">Lütfen geçerli bir e-posta girin.</p>
-            </div>
-            <label class="flex gap-3 items-start text-sm text-gray-300">
-              <input id="age" type="checkbox" class="mt-1" required />
-              <span>18 yaşından büyüğüm ve yukarıdaki risk uyarılarını okudum. Bu platformun yatırım tavsiyesi vermediğini anlıyorum.</span>
-            </label>
-            <button id="submitBtn" type="submit" disabled class="w-full bg-blue-600 disabled:bg-blue-600/50 hover:bg-blue-700 font-semibold px-6 py-3 rounded-lg">Beta Programına Abone Ol</button>
-            <p id="formStatus" class="text-sm"></p>
-            <p class="text-xs text-gray-400">Kaydolduğunuzda spam göndermiyoruz. Sadece platform hazır olduğunda ve önemli güncellemelerde haber veririz. Gizlilik sözleşmemizi okuyabilirsiniz.</p>
-          </form>
+        <div class="mt-8 flex gap-3 fade-in">
+          <a href="#basla" class="px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold text-white">Beta Erişimi Al</a>
+          <a href="#nasil-calisir" class="px-6 py-3 rounded-full bg-white/10 hover:bg-white/20 border border-white/10 text-white/90">Nasıl Çalışır?</a>
         </div>
       </div>
     </section>
@@ -422,6 +412,118 @@
         validate();
       });
       validate();
+    })();
+  </script>
+  <script>
+  // ==== HERO: Scroll → Video timeline scrub + Klavye Kontrolleri ====
+  (function(){
+    var hero = document.getElementById('hero');
+    var v = document.getElementById('oq-hero-video');
+    if(!hero || !v) return;
+
+    var duration = 0, ready = false, ticking = false, manualUntil = 0;
+    function clamp(x,a,b){ return Math.min(b, Math.max(a,x)); }
+    function inView(){
+      var r = hero.getBoundingClientRect();
+      return r.bottom > 0 && r.top < window.innerHeight;
+    }
+    function heroProgress(){
+      var r = hero.getBoundingClientRect();
+      var vh = window.innerHeight;
+      var total = Math.max(1, r.height - vh);
+      var scrolled = clamp(-r.top, 0, total);
+      return scrolled / total; // 0..1
+    }
+    function onScroll(){
+      if(!ready || !duration) return;
+      if (performance.now() < manualUntil) return; // klavye ile manuel ayarı koru
+      if(ticking) return; ticking = true;
+      requestAnimationFrame(function(){
+        var t = heroProgress();
+        var target = t * duration;
+        if (Math.abs(v.currentTime - target) > 0.02) v.currentTime = target;
+        ticking = false;
+      });
+    }
+    function armManual(){ try{ v.pause(); }catch(e){} v.playbackRate = 0; }
+
+    v.addEventListener('loadedmetadata', function(){
+      duration = v.duration || 0;
+      armManual();
+      ready = true;
+      onScroll();
+    });
+    // Bazı tarayıcılarda decode başlatmak için kısa play→pause
+    v.addEventListener('canplay', function(){
+      try { v.play().then(function(){ v.pause(); }).catch(function(){}); } catch(e) {}
+    });
+
+    window.addEventListener('scroll', onScroll, { passive:true });
+    window.addEventListener('resize', onScroll);
+    document.addEventListener('visibilitychange', function(){ if(document.hidden) armManual(); });
+
+    // Klavye kontrolleri
+    var JOG_SEC = 0.5;      // ↑ / ↓ için ileri/geri sarma adımı
+    var FRAME_SEC = 1/30;   // ← / → için yaklaşık frame-by-frame adımı
+    document.addEventListener('keydown', function(e){
+      if (!inView()) return; // yalnızca HERO görünürken aktif
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var key = e.key;
+      if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'ArrowLeft' || key === 'ArrowRight') {
+        // form alanlarında çalışmasın
+        var tag = (document.activeElement && document.activeElement.tagName) || '';
+        if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+        e.preventDefault();
+        if (!ready || !duration) return;
+        var t = v.currentTime || 0;
+        if (key === 'ArrowDown') t += JOG_SEC;      // ⏩ ileri sarma
+        else if (key === 'ArrowUp') t -= JOG_SEC;   // ⏪ geri sarma
+        else if (key === 'ArrowRight') t += FRAME_SEC; // → bir kare ileri
+        else if (key === 'ArrowLeft') t -= FRAME_SEC;  // ← bir kare geri
+        v.currentTime = clamp(t, 0, duration);
+        manualUntil = performance.now() + 500; // 0.5s boyunca scroll override etme
+      }
+    });
+  })();
+</script>
+  <script>
+    // Hero küçük form (heroBeta) – yalın doğrulama + durum mesajı
+    (function(){
+      var form = document.getElementById('heroBeta');
+      if(!form) return;
+      var email = form.querySelector('input[type="email"]');
+      var status = form.querySelector('[data-status]');
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        if(!email.checkValidity()) { email.reportValidity(); return; }
+        status.textContent = 'Teşekkürler! Erken erişim listesine eklendiniz.';
+        form.reset();
+      });
+    })();
+
+  </script>
+  <script>
+    // Scroll ilerleme çubuğu (doküman ilerleme yüzdesi)
+    (function(){
+      var bar = document.getElementById('scrollbar'); if(!bar) return;
+      var ticking = false;
+      function pct(){
+        var doc = document.documentElement;
+        var max = Math.max(1, doc.scrollHeight - window.innerHeight);
+        return Math.min(1, window.scrollY / max);
+      }
+      function onScroll(){
+        if(ticking) return; ticking = true;
+        requestAnimationFrame(function(){
+      var p = pct();
+      bar.style.transform = 'scaleX(' + p + ')';
+      bar.setAttribute('aria-valuenow', String(Math.round(p*100)));
+      ticking = false;
+    });
+      }
+      window.addEventListener('scroll', onScroll, {passive:true});
+      window.addEventListener('resize', onScroll, {passive:true});
+      onScroll();
     })();
   </script>
 </body>
