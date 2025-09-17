@@ -18,14 +18,17 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.0.4",
     "@vitejs/plugin-react": "^4.0.0",
-    "vite": "^4.4.5",
-    "tailwindcss": "^3.3.0",
-    "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.24"
+    "vite": "^5.4.8",
+    "tailwindcss": "^3.4.13",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "concurrently": "^9.0.1"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0",
+    "dev:full": "concurrently \"vite --host 0.0.0.0\" \"cd ../../backend && FLASK_APP=backend.app:create_app flask run --reload\"",
     "build": "vite build",
+    "build:copy": "node -e \"const path=require('path');const fs=require('fs');const src=path.resolve('dist');if(!fs.existsSync(src)){console.error('dist klasörü bulunamadı');process.exit(1);}const dest=path.resolve('../../backend/static');fs.rmSync(dest,{recursive:true,force:true});fs.mkdirSync(dest,{recursive:true});fs.cpSync(src,dest,{recursive:true});\"",
     "preview": "vite preview",
     "type-check": "tsc --noEmit"
   },

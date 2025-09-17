@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import os
 
-from flask import Flask
+from flask import Flask, current_app, request
 from flask.testing import FlaskClient
 from sqlalchemy.pool import StaticPool
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -18,7 +18,8 @@ from .security import security_headers
 
 def create_app(config_object: str | None = None) -> Flask:
     """Flask uygulamasını oluşturur ve çekirdek bileşenleri bağlar."""
-    app = Flask(__name__)
+    static_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "static"))
+    app = Flask(__name__, static_folder=static_root, static_url_path="/static")
 
     # Provide legacy-compatible test client for set_cookie signature
     class _CompatClient(FlaskClient):
@@ -227,6 +228,31 @@ def create_app(config_object: str | None = None) -> Flask:
     except Exception as e:
         logging.getLogger(__name__).warning(f"ML routes not registered: {e}")
 
+    # Modern API blueprint (opsiyonel, fallback destekli)
+    try:
+        from .blueprints.api_modern import api_modern_bp, limiter as api_modern_limiter
+
+        if "api_modern" not in app.blueprints:
+            app.register_blueprint(api_modern_bp, url_prefix="/api")
+        if api_modern_limiter:
+            try:
+                api_modern_limiter.init_app(app)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "api_modern limiter init skipped: %s", exc
+                )
+    except Exception as exc:
+        logging.getLogger(__name__).warning("api_modern blueprint not registered: %s", exc)
+
+    # Frontend SPA blueprint (opsiyonel)
+    try:
+        from .blueprints.frontend import frontend_bp
+
+        if "frontend" not in app.blueprints:
+            app.register_blueprint(frontend_bp)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("frontend blueprint not registered: %s", exc)
+
     # --- RESTX API v1 (versioned) ---
     try:
         from backend.api.restx_v1 import create_v1_blueprint
@@ -239,5 +265,32 @@ def create_app(config_object: str | None = None) -> Flask:
     except Exception:
         # RESTX is optional; skip if not installed
         pass
+
+    @app.after_request
+    def _set_cache_headers(resp):
+        try:
+            path = request.path or ""
+            endpoint = request.endpoint or ""
+            if path.startswith("/api/") or endpoint.startswith("api"):
+                resp.headers["Cache-Control"] = "no-store"
+                resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+            elif path.startswith("/static/"):
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        except Exception:
+            pass
+        return resp
+
+    def _serve_spa_index():
+        static_folder = app.static_folder or ""
+        index_path = os.path.join(static_folder, "index.html") if static_folder else ""
+        if static_folder and os.path.exists(index_path):
+            return current_app.send_static_file("index.html")
+        return {"error": "SPA build not found"}, 503
+
+    @app.route("/")
+    @app.route("/analysis")
+    @app.route("/portfolio")
+    def serve_spa():
+        return _serve_spa_index()
 
     return app

@@ -4,6 +4,10 @@ import os
 from datetime import datetime
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+try:
+    from flask_compress import Compress
+except Exception:
+    Compress = None  # type: ignore
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import redis
@@ -210,6 +214,12 @@ def create_app(config_name: str = None) -> Flask:
     
     # Flask app oluştur
     app = Flask(__name__)
+    # Enable gzip compression if available
+    try:
+        if Compress:
+            Compress(app)
+    except Exception:
+        pass
     
     # .env yükle (production haric)
     env_name = os.getenv('FLASK_ENV', 'development')
@@ -354,6 +364,20 @@ def create_app(config_name: str = None) -> Flask:
     
     # Development tables
     setup_development_tables(app)
+
+    # Basic cache strategy for API/static
+    @app.after_request
+    def _set_cache_headers(resp):
+        try:
+            path = request.path or ""
+            if path.startswith("/api/"):
+                resp.headers["Cache-Control"] = "no-store"
+                resp.headers["X-Content-Type-Options"] = "nosniff"
+            elif path.startswith("/static/"):
+                resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        except Exception:
+            pass
+        return resp
     
     # Initialize security service synchronously to avoid loop conflicts
     try:
