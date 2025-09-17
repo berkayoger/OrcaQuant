@@ -283,6 +283,14 @@ def create_app(config_name: str = None) -> Flask:
         pass
     db.init_app(app)
 
+    with app.app_context():
+        try:
+            from .db.models import ensure_admin_support_tables
+
+            ensure_admin_support_tables(app)
+        except Exception as exc:
+            logger.warning(f"Admin support tables check skipped: {exc}")
+
     # Initialize cache
     _init_cache(app)
 
@@ -625,8 +633,11 @@ def register_blueprints(app: Flask):
     
     # Admin Panel Blueprint (non-API UI, optional)
     try:
-        from .admin_panel import admin_bp
+        from .admin_panel import admin_bp, admin_console_bp
+
         app.register_blueprint(admin_bp, url_prefix='/admin')
+        if admin_console_bp:
+            app.register_blueprint(admin_console_bp)
     except Exception:
         pass
 

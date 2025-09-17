@@ -8,12 +8,82 @@ from flask import current_app, g, jsonify, request
 from flask_jwt_extended import get_jwt_identity
 from loguru import logger
 
+from backend.auth.middlewares import admin_required as _admin_required
+from backend.auth.jwt_utils import TokenManager
 from backend.db.models import SubscriptionPlan, User, UserRole
 
 
 def _error_response(message: str, status_code: int):
     """Hata yanıtları için merkezi bir yardımcı fonksiyon."""
     return jsonify({"error": message}), status_code
+
+
+def _decode_jwt_from_header():
+    """Authorization header'ından JWT payload'ını çöz."""
+
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if not auth_header:
+        return None, None
+    if not auth_header.startswith("Bearer "):
+        return None, ("unauthorized", 401)
+
+    token = auth_header.split(" ", 1)[1].strip()
+    if not token:
+        return None, ("unauthorized", 401)
+
+    try:
+        payload = TokenManager.verify_token(token, "access")
+        return payload, None
+    except Exception:
+        return None, ("unauthorized", 401)
+
+
+def requires_admin(fn):
+    """JWT Authorization header'ı üzerinden admin kontrolü sağlayan decorator."""
+
+    admin_roles = {"admin", "system_admin"}
+
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        payload, err = _decode_jwt_from_header()
+        if err:
+            message, status = err
+            return jsonify({"error": message}), status
+
+        if payload:
+            user = None
+            user_id = payload.get("user_id")
+            if user_id:
+                user = User.query.get(user_id)
+
+            # Bazı senaryolarda payload içinde roller bulunabilir
+            payload_roles = payload.get("roles")
+            roles = set()
+            if isinstance(payload_roles, (list, tuple, set)):
+                roles.update(str(r).lower() for r in payload_roles)
+            elif isinstance(payload_roles, str):
+                roles.add(payload_roles.lower())
+
+            if user is not None:
+                user_role = user.role.value if isinstance(user.role, UserRole) else user.role
+                if user_role:
+                    roles.add(str(user_role).lower())
+
+            if user is not None and roles.intersection(admin_roles):
+                g.user = user
+                g.jwt_payload = payload
+                return fn(*args, **kwargs)
+
+            if user is None:
+                return jsonify({"error": "unauthorized"}), 401
+            return jsonify({"error": "forbidden"}), 403
+
+        # Authorization header yoksa veya JWT kullanılmıyorsa
+        # mevcut admin_required decorator'ına düş
+        decorated = _admin_required()(fn)
+        return decorated(*args, **kwargs)
+
+    return wrapper
 
 
 def admin_required(f):
@@ -67,7 +137,9 @@ def require_role(required_role: UserRole):
             # Kullanıcının rolünü kontrol et
             if g.user.role != required_role:
                 logger.warning(
-                    f"Yetkisiz erişim denemesi. Kullanıcı: {g.user.username}, Gerekli Rol: {required_role.name}"
+                    "Yetkisiz erişim denemesi. Kullanıcı: %s, Gerekli Rol: %s",
+                    g.user.username,
+                    required_role.name,
                 )
                 return _error_response(
                     f"Erişim yetkiniz yok. Gerekli rol: {required_role.name}", 403
@@ -147,17 +219,24 @@ def require_subscription_plan(minimum_plan: SubscriptionPlan):
             # Kullanıcının aboneliğinin aktif olup olmadığını kontrol et
             if not g.user.is_subscription_active():
                 logger.warning(
-                    f"Kullanıcı {g.user.username} aktif olmayan abonelikle erişmeye çalıştı. Plan: {g.user.subscription_level.name}"
+                    "Kullanıcı %s aktif olmayan abonelikle erişmeye çalıştı. Plan: %s",
+                    g.user.username,
+                    g.user.subscription_level.name,
                 )
                 return _error_response("Aktif bir aboneliğiniz bulunmamaktadır.", 403)
 
             # Kullanıcının plan seviyesi, gerekli minimum seviyeden düşükse erişimi engelle
             if user_plan_level < required_plan_level:
                 logger.warning(
-                    f"Yetersiz abonelik seviyesi. Kullanıcı: {g.user.username}, Mevcut Plan: {g.user.subscription_level.name}, Gerekli Plan: {minimum_plan.name}"
+                    "Yetersiz abonelik seviyesi. Kullanıcı: %s, Mevcut Plan: %s, Gerekli Plan: %s",
+                    g.user.username,
+                    g.user.subscription_level.name,
+                    minimum_plan.name,
                 )
                 return _error_response(
-                    f"Bu özelliğe erişim için en az '{minimum_plan.name.capitalize()}' abonelik planı gereklidir.",
+                    "Bu özelliğe erişim için en az '{}' abonelik planı gereklidir.".format(
+                        minimum_plan.name.capitalize()
+                    ),
                     403,
                 )
 
