@@ -1,7 +1,7 @@
 """Add custom features and plan discount fields
 
 Revision ID: 20251010_01
-Revises: 20250901_01
+Revises: 20250903_add_api_keys
 Create Date: 2025-10-10
 """
 
@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = "20251010_01"
-down_revision = "20250901_01"
+down_revision = "20250903_add_api_keys"
 branch_labels = None
 depends_on = None
 

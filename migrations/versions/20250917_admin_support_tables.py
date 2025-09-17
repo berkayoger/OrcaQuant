@@ -1,7 +1,7 @@
 """admin support tables & promotion_code columns
 
 Revision ID: 20250917_admin_support
-Revises: 20251201_01
+Revises: remove_subscription_plan_limits
 Create Date: 2025-09-17
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.engine.reflection import Inspector
 
 # revision identifiers, used by Alembic.
 revision = "20250917_admin_support"
-down_revision = "20251201_01"
+down_revision = "remove_subscription_plan_limits"
 branch_labels = None
 depends_on = None
 

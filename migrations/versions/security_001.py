@@ -2,7 +2,7 @@
 
 Revision ID: security_001
 
-Revises: 20251201_01
+Revises: 20250917_admin_support
 
 Create Date: 2025-01-01 00:00:00.000000
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 revision = "security_001"
 
-down_revision = "20251201_01"
+down_revision = "20250917_admin_support"
 
 branch_labels = None
 depends_on = None
