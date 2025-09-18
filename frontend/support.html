@@ -1,0 +1,35 @@
+<!doctype html><html lang="tr"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Destek · OrcaQuant</title>
+  <link rel="stylesheet" href="/static/styles/legal.css">
+  <script src="/static/ui.js" defer></script>
+</head><body><div class="wrap">
+  <header><strong>OrcaQuant</strong><nav>
+    <a href="/landing.html">Ana Sayfa</a>
+    <a href="/faq.html">SSS</a>
+    <a href="/support.html" aria-current="page">Destek</a>
+  </nav></header>
+  <h1>Destek</h1>
+  <form id="f" onsubmit="return false">
+    <label>Ad Soyad <input required name="name" autocomplete="name"></label><br>
+    <label>E-posta <input required name="email" autocomplete="email" type="email"></label><br>
+    <label>Konu <input required name="subject"></label><br>
+    <label>Mesaj <textarea required name="message" rows="5"></textarea></label><br>
+    <button>Gönder</button>
+  </form>
+  <script>
+    document.getElementById('f').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(e.target).entries());
+      try {
+        UI.showLoading();
+        // Örnek: destek sistemi entegrasyonu burada yapılır
+        // await UI.fetchWithStatus('/api/support', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+        UI.toast('Talebiniz alındı. Teşekkürler.');
+        e.target.reset();
+      } catch { UI.toast('Gönderim başarısız', false) } finally { UI.hideLoading(); }
+    });
+  </script>
+  <footer><small>Alternatif: support@orcaquant.com</small></footer>
+</div></body></html>
+

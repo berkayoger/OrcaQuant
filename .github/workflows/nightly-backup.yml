@@ -1,0 +1,32 @@
+name: Nightly DB Backup
+on:
+  schedule:
+    - cron: "17 1 * * *"  # her gün 04:17 TR
+  workflow_dispatch: {}
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Env hazırla
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+          echo "AWS_S3_BACKUP_BUCKET=${{ secrets.AWS_S3_BACKUP_BUCKET }}" >> $GITHUB_ENV
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+      - name: AWS CLI
+        uses: aws-actions/setup-cli@v2
+        if: ${{ env.AWS_S3_BACKUP_BUCKET && env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY }}
+      - name: Backup çalıştır
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client sqlite3
+          bash scripts/backup_db.sh
+      - name: Upload artifact (S3 yoksa)
+        if: ${{ !env.AWS_S3_BACKUP_BUCKET }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup
+          path: backup/

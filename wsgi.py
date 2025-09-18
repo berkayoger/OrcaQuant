@@ -3,10 +3,29 @@ import os
 
 from loguru import logger
 
+
+def _safe_setup_observability(flask_app):
+    """Enable metrics/logging without breaking boot if optional deps fail."""
+    try:
+        from backend.observability.metrics import register_metrics
+
+        register_metrics(flask_app)
+    except Exception as exc:  # pragma: no cover - defensive around optional deps
+        flask_app.logger.warning("Metrics setup skipped: %s", exc)
+
+    try:
+        from backend.logging_conf import configure_logging
+
+        configure_logging(flask_app)
+    except Exception as exc:  # pragma: no cover
+        flask_app.logger.warning("Logging setup skipped: %s", exc)
+
+
 try:
     from backend import create_app, socketio
 
     app = create_app()
+    _safe_setup_observability(app)
 
     if __name__ == "__main__":
         logger.info("Flask uygulaması başlatılıyor.")

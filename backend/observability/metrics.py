@@ -5,11 +5,35 @@ import time
 from contextlib import contextmanager
 from typing import Iterable, Optional
 
-from prometheus_client import (CONTENT_TYPE_LATEST, CollectorRegistry, Counter,
-                               Gauge, Histogram, generate_latest)
+from flask import Blueprint, Response, request
+from prometheus_client import (
+    CONTENT_TYPE_LATEST,
+    CollectorRegistry,
+    Counter,
+    Gauge,
+    Histogram,
+    generate_latest,
+)
+from werkzeug.exceptions import HTTPException
 
 # Custom registry so we can export only our app metrics if needed
 REGISTRY = CollectorRegistry()
+METRICS_START_KEY = "orcaquant.metrics.start"
+
+HTTP_REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests processed by Flask",
+    ["method", "endpoint", "status"],
+    registry=REGISTRY,
+)
+
+HTTP_REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "HTTP request latency in seconds",
+    ["method", "endpoint"],
+    registry=REGISTRY,
+    buckets=(0.05, 0.1, 0.25, 0.5, 1, 2, 5),
+)
 
 
 def _latency_buckets_from_env() -> Optional[Iterable[float]]:
@@ -160,3 +184,79 @@ def prometheus_wsgi_app(environ, start_response):
     ]
     start_response(status, headers)
     return [data]
+
+
+def _is_truthy(value: Optional[object]) -> bool:
+    return str(value).lower() in {"1", "true", "yes", "on"}
+
+
+def _label_endpoint(endpoint: Optional[str]) -> str:
+    return (endpoint or "unknown").replace(".", "_")
+
+
+def _observe_request_metrics(method: Optional[str], endpoint: Optional[str], status: int, duration: Optional[float]) -> None:
+    method_label = (method or "UNKNOWN").upper()
+    endpoint_label = _label_endpoint(endpoint)
+    if duration is not None:
+        HTTP_REQUEST_LATENCY.labels(method=method_label, endpoint=endpoint_label).observe(duration)
+    HTTP_REQUEST_COUNT.labels(method=method_label, endpoint=endpoint_label, status=str(status)).inc()
+
+
+def register_metrics(app):  # pragma: no cover - integration wiring
+    if "orcaquant_metrics" in app.blueprints:
+        return
+
+    metrics_path = (
+        app.config.get("PROMETHEUS_METRICS_PATH")
+        or os.getenv("PROMETHEUS_METRICS_PATH", "/metrics")
+    )
+    if not str(metrics_path).startswith("/"):
+        metrics_path = f"/{metrics_path}"
+
+    metrics_bp = Blueprint("orcaquant_metrics", __name__)
+
+    def _enabled() -> bool:
+        value = app.config.get("ENABLE_METRICS")
+        if value is None:
+            value = os.getenv("ENABLE_METRICS", "true")
+        return _is_truthy(value)
+
+    def _metrics_view():
+        if not _enabled():
+            return Response("metrics disabled\n", status=404, mimetype="text/plain")
+        return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
+
+    metrics_bp.add_url_rule(metrics_path, "metrics", _metrics_view)
+
+    @app.before_request
+    def _metrics_before_request():
+        if not _enabled():
+            return
+        request.environ[METRICS_START_KEY] = time.perf_counter()
+
+    @app.after_request
+    def _metrics_after_request(response):
+        if not _enabled():
+            return response
+        start = request.environ.pop(METRICS_START_KEY, None)
+        duration = None
+        if start is not None:
+            duration = time.perf_counter() - start
+        _observe_request_metrics(request.method, request.endpoint, response.status_code, duration)
+        return response
+
+    @app.teardown_request
+    def _metrics_teardown(exc):
+        if not _enabled() or exc is None:
+            return
+        start = request.environ.pop(METRICS_START_KEY, None)
+        duration = None
+        if start is not None:
+            duration = time.perf_counter() - start
+        status = 500
+        if isinstance(exc, HTTPException) and getattr(exc, "code", None):
+            status = exc.code  # type: ignore[assignment]
+        _observe_request_metrics(request.method, request.endpoint, status, duration)
+
+    app.register_blueprint(metrics_bp)
+    app.logger.info("Prometheus metrics blueprint registered at %s", metrics_path)

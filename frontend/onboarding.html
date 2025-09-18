@@ -1,0 +1,45 @@
+<!doctype html><html lang="tr"><head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Onboarding · OrcaQuant</title>
+  <link rel="stylesheet" href="/static/styles/legal.css">
+  <script src="/static/ui.js" defer></script>
+</head><body>
+  <div class="wrap">
+    <header><strong>OrcaQuant</strong><nav>
+      <a href="/landing.html">Ana Sayfa</a>
+      <a href="/faq.html">SSS</a>
+      <a href="/support.html">Destek</a>
+    </nav></header>
+    <h1>Hızlı Başlangıç</h1>
+    <form id="ob" onsubmit="return false" aria-describedby="ob-help">
+      <label>Hedef zaman dilimi
+        <select id="tf">
+          <option value="short">Kısa (1-7g)</option>
+          <option value="mid">Orta (8-45g)</option>
+          <option value="long">Uzun (46g+)</option>
+        </select>
+      </label>
+      <br>
+      <label>Risk tercihi
+        <select id="risk">
+          <option>Konservatif</option>
+          <option>Normal</option>
+          <option>Agresif</option>
+        </select>
+      </label>
+      <br><button id="go">Profilimi Oluştur</button>
+      <p id="ob-help" class="muted">Seçimleriniz kişisel veri değildir; yalnızca analiz tercihlerinizi ayarlarız.</p>
+    </form>
+    <script>
+      document.getElementById('go').addEventListener('click', async ()=>{
+        try{
+          UI.showLoading();
+          // API entegrasyonu için örnek
+          // const res = await UI.fetchWithStatus('/api/onboarding', {method:'POST', body: JSON.stringify({...})});
+          UI.toast('Profiliniz kaydedildi.');
+        }catch(e){ UI.toast('Kayıt başarısız', false) } finally{ UI.hideLoading() }
+      });
+    </script>
+  </div>
+</body></html>
+

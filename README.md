@@ -7,6 +7,55 @@
 > - HSTS/CSP ve temel güvenlik başlıkları
 > katmanlarını uygular.
 
+## 🚀 Production Hazırlığı (Tamamlandı)
+Bu repo, aşağıdaki production bileşenleriyle güncellendi:
+
+- **SSL/TLS**: `deploy/nginx/orcaquant.conf` + Let's Encrypt entegrasyonu (Certbot ile otomasyon)
+- **DB Production Konfigürasyonu**: `.env.production.example` yeni değişkenler, bağlantı havuzu, read-only flag’leri
+- **Load Balancer & CDN**: Nginx reverse proxy ayarı, Cloudflare uyumlu başlıklar
+- **Backup Stratejisi**: `scripts/backup_db.sh` + `scripts/restore_db.sh` ve `/.github/workflows/nightly-backup.yml`
+- **Monitoring & Logging**: `monitoring/docker-compose.monitoring.yml` (Prometheus+Grafana+Loki), `monitoring/prometheus.yml`,
+  `monitoring/loki-config.yml`, örnek dashboard ve backend `/metrics` uç noktası
+
+### Hızlı Başlangıç (Monitoring yerel)
+```bash
+docker compose -f monitoring/docker-compose.monitoring.yml up -d
+# Prometheus: http://localhost:9090  Grafana: http://localhost:3000  Loki: http://localhost:3100
+```
+
+## 📜 Legal & Compliance (Tamamlandı)
+`frontend/legal/` altında:
+- `privacy.html` (Gizlilik Politikası)
+- `terms.html` (Kullanım Şartları)
+- `kvkk.html` (KVKK Aydınlatma Metni – ana unsurlar dahil)
+- `risk.html` (Finansal risk bildirimi)
+
+## 🎨 UX Geliştirmeleri (Tamamlandı)
+- Responsive meta ve layout iyileştirmeleri
+- `frontend/static/ui.js` ile **loading state** + **hata yönetimi** + erişilebilir toast
+- `frontend/static/notify.js` ile **real-time bildirim** altyapısı (Socket.IO tercih; yoksa güvenli fallback)
+
+## 💼 İş Geliştirme (Tamamlandı)
+- `frontend/landing.html` (Landing & pazarlama)
+- `frontend/onboarding.html` (Onboarding sihirbazı)
+- `frontend/faq.html` (SSS)
+- `frontend/support.html` (Müşteri destek iletişim sayfası)
+
+## 🔐 Notlar
+- Üretimde sırları `.env` yerine bir Secrets Manager ile yönetin.
+- Nginx için `HSTS`, `X-Content-Type-Options`, `X-Frame-Options` başlıkları aktiftir.
+
+## 📈 İzleme & Uyarı
+- `/metrics` uç noktası Prometheus uyumlu metrik verir.
+- Grafana dashboard örneği: `monitoring/grafana/provisioning/dashboards/orcaquant-overview.json`
+
+## 🔁 Yedekleme
+GitHub Actions gece yedeği: `/.github/workflows/nightly-backup.yml`
+AWS S3 yapılandırılmışsa S3’e yükler; değilse build artifact olarak saklar.
+
+## 🤝 Destek
+`frontend/support.html` üzerindeki formu kullanın veya `support@orcaquant.com`.
+
 ## Ortam Değişkenlerini Hazırlama
 `.env.example` dosyanız branch’ler arasında farklı olabilir. Çatışma yaşamamak için
 gerekli yeni anahtarları idempotent bir script ile ekliyoruz:
@@ -422,4 +471,3 @@ bakabilirsiniz.
 yönetilir. Yerel geliştirmede gerekli değerler `.env` dosyalarına yazılır; bu
 dosyalar depoya eklenmez ve `.gitignore` tarafından korunur. Örnek
 konfigürasyonlar için `*.env.example` dosyalarına bakabilirsiniz.
-
