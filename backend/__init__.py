@@ -316,6 +316,13 @@ def create_app(config_name: str = None) -> Flask:
         except Exception as exc:
             logger.warning(f"Admin support tables check skipped: {exc}")
 
+        try:
+            from .repositories import admin_repo_sqlite
+
+            admin_repo_sqlite.ensure_schema_and_seed()
+        except Exception as exc:
+            logger.warning(f"Admin repository bootstrap skipped: {exc}")
+
     # Initialize cache
     _init_cache(app)
 
@@ -681,7 +688,16 @@ def setup_security_service_sync(app: Flask) -> SecurityOptimizationService:
 
 def register_blueprints(app: Flask):
     """Blueprint'leri kaydet"""
-    
+
+    # Lightweight admin APIs
+    try:
+        from .blueprints import admin_api, csrf_api
+
+        app.register_blueprint(csrf_api.bp)
+        app.register_blueprint(admin_api.bp)
+    except Exception as exc:
+        logger.warning(f"Lightweight admin blueprints not registered: {exc}")
+
     # API Blueprint (ensure routes imported)
     try:
         from .api.routes import api_bp as api_routes_bp

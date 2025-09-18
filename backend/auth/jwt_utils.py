@@ -145,6 +145,15 @@ def verify_jwt(token: str):
 def verify_csrf() -> bool:
     """Validate CSRF token sent via header against cookie"""
     sent = request.headers.get("X-CSRF-Token")
+    if sent:
+        try:
+            from backend.security.csrf import verify_csrf as verify_signed_csrf
+
+            verify_signed_csrf(sent)
+            return True
+        except Exception:
+            # Fall back to legacy cookie-based CSRF validation
+            pass
     stored = request.cookies.get("csrf-token")
     return bool(sent and stored and sent == stored)
 
