@@ -77,3 +77,12 @@ app = bootstrap_security(_real_app)
 
 # Otomatik blueprint ve veritabanı kayıtları
 register_all(app)
+
+# --- OrcaQuant product v2 bootstrap (non-invasive) ---
+try:
+    from backend.product_v2 import init_app as _oq_v2_init
+
+    _oq_v2_init(app, prefix="/api/v2")
+except Exception:
+    # prod'da sessiz geç; dev'de loglamayı tercih edebilirsiniz
+    pass
