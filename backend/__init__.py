@@ -320,8 +320,9 @@ def create_app(config_name: str = None) -> Flask:
     _init_cache(app)
 
     # Rate Limiter setup (Flask-Limiter v3 compatible)
-    limiter.default_limits = ["200 per day", "50 per hour"]
-    limiter.storage_uri = app.config.get('REDIS_URL', 'memory://')
+    rate_limits = app.config.get('RATE_LIMITS', "200 per day;50 per hour")
+    limiter.default_limits = [lim.strip() for lim in str(rate_limits).split(';') if lim.strip()]
+    limiter.storage_uri = app.config.get('RATELIMIT_STORAGE_URI', app.config.get('REDIS_URL', 'memory://'))
     limiter.init_app(app)
     # Log rate-limit hits and return JSON error responses
     try:

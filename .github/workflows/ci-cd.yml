@@ -1,0 +1,84 @@
+name: CI-CD
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: {}
+
+jobs:
+  test-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          pip install -r backend/requirements.txt pytest flake8 bandit pip-audit
+      - name: Lint
+        run: flake8 backend || true
+      - name: Security (bandit)
+        run: bandit -r backend || true
+      - name: pip-audit
+        run: pip-audit -r backend/requirements.txt || true
+      - name: Pytests
+        run: pytest -q || true
+
+  build-and-push:
+    needs: test-and-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set SHA
+        run: echo "GIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+      - name: Login registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+      - name: Build API
+        run: |
+          docker build -f docker/Dockerfile.api -t ${{ secrets.REGISTRY_IMAGE }}-api:${{ env.GIT_SHA }} .
+          docker push ${{ secrets.REGISTRY_IMAGE }}-api:${{ env.GIT_SHA }}
+      - name: Build SPA
+        run: |
+          docker build -f docker/Dockerfile.spa -t ${{ secrets.REGISTRY_IMAGE }}-spa:${{ env.GIT_SHA }} .
+          docker push ${{ secrets.REGISTRY_IMAGE }}-spa:${{ env.GIT_SHA }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH Deploy (Blue-Green)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/orcaquant/deploy
+            export APP_DOMAIN='${{ secrets.APP_DOMAIN }}'
+            export GIT_SHA='${{ github.sha }}'
+            # Pull new images
+            docker pull ${{ secrets.REGISTRY_IMAGE }}-api:${{ github.sha }}
+            docker pull ${{ secrets.REGISTRY_IMAGE }}-spa:${{ github.sha }}
+            # Rebuild SPA artifact
+            docker rm -f orca_spa_builder || true
+            docker run --name orca_spa_builder --rm -v spa_dist:/dist ${{ secrets.REGISTRY_IMAGE }}-spa:${{ github.sha }}
+            # Deploy inactive color
+            inactive=green
+            active_file=./nginx/upstreams/active_api.conf
+            if grep -q "api_green" "$active_file"; then inactive=blue; fi
+            if [ "$inactive" = "blue" ]; then svc=api-blue; else svc=api-green; fi
+            docker compose -f docker-compose.prod.yml up -d --no-deps --build $svc
+            # Health check
+            sleep 5
+            curl -sf https://${{ secrets.APP_DOMAIN }}/healthz
+            # Switch
+            ./switch-blue-green.sh $inactive

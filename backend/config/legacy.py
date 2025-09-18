@@ -14,7 +14,10 @@ def env_bool(key: str, default: bool = False) -> bool:
 
 
 class BaseConfig:
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///ytd_crypto.db")
+    SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_ME")
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:////data/ytd_crypto.db")
+    SQLALCHEMY_DATABASE_URI = DATABASE_URL
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         "pool_size": int(os.getenv("DB_POOL_SIZE", "10")),
@@ -33,20 +36,22 @@ class BaseConfig:
     SWAGGER_UI_URL = os.getenv("SWAGGER_UI_URL", "/swagger")
 
     # === Logging & Monitoring ===
-    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
     SENTRY_DSN = os.getenv("SENTRY_DSN", "")
     SENTRY_TRACES_SAMPLE_RATE = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
     SENTRY_PROFILES_SAMPLE_RATE = float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.1"))
+    OTEL_EXPORTER_OTLP_ENDPOINT = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+    GIT_SHA = os.getenv("GIT_SHA", "dev")
 
     # === Cache Configuration ===
-    CACHE_REDIS_URL = os.getenv("CACHE_REDIS_URL", os.getenv("REDIS_URL", "redis://localhost:6379/1"))
+    REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+    CACHE_REDIS_URL = os.getenv("CACHE_REDIS_URL", os.getenv("REDIS_URL", REDIS_URL))
     CACHE_DEFAULT_TIMEOUT = int(os.getenv("CACHE_DEFAULT_TIMEOUT", "300"))
     CACHE_KEY_PREFIX = os.getenv("CACHE_KEY_PREFIX", "ytd:")
     L1_CACHE_TTL = int(os.getenv("L1_CACHE_TTL", "60"))
 
     CELERY_TIMEZONE = "Europe/Istanbul"
-    CELERY_BROKER_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    CELERY_RESULT_BACKEND = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
     
     # === Enhanced Celery Configuration ===
     CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "300"))
@@ -77,6 +82,11 @@ class BaseConfig:
         },
     }
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "https://app.example.com")
+    ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+    if not ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS = ["*"]
+    ENABLE_METRICS = os.getenv("ENABLE_METRICS", "true").lower() == "true"
+    RATE_LIMITS = os.getenv("RATE_LIMITS", "200 per minute;5 per second")
     RATELIMIT_STORAGE_URI = os.getenv("RATELIMIT_STORAGE_URI", "memory://")
 
     ACCESS_TOKEN_SECRET = os.getenv("ACCESS_TOKEN_SECRET", "change_me_access")

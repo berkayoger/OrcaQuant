@@ -1,0 +1,77 @@
+version: "3.9"
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+
+  api-blue:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: orca_api_blue
+    env_file:
+      - ../.env
+    environment:
+      GIT_SHA: ${GIT_SHA:-blue}
+    depends_on:
+      - redis
+    networks: [orca]
+    restart: unless-stopped
+
+  api-green:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: orca_api_green
+    env_file:
+      - ../.env
+    environment:
+      GIT_SHA: ${GIT_SHA:-green}
+    depends_on:
+      - redis
+    networks: [orca]
+    restart: unless-stopped
+    deploy:
+      replicas: 0  # başlangıçta kapalı
+
+  spa:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.spa
+    volumes:
+      - spa_dist:/dist
+    networks: [orca]
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: orca_nginx
+    depends_on:
+      - api-blue
+      - api-green
+      - spa
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/upstreams:/etc/nginx/upstreams
+      - spa_dist:/var/www/spa:ro
+      - certs:/etc/letsencrypt
+      - certs-data:/var/lib/letsencrypt
+    environment:
+      - APP_DOMAIN=${APP_DOMAIN}
+    networks: [orca]
+    restart: unless-stopped
+
+volumes:
+  redisdata:
+  spa_dist:
+  certs:
+  certs-data:
+
+networks:
+  orca:
+    driver: bridge
