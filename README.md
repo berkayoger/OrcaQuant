@@ -1,473 +1,287 @@
+<div align="center">
+
 # OrcaQuant
 
-> **Security-hardening aktif**  
-> Prod/staging kurulumunda WSGI entrypoint olarak **`app.secure_app:app`** kullanın. Bu sarmalayıcı mevcut Flask uygulamasını otomatik bulur ve:
-> - CORS allowlist,
-> - Global rate limit + login özel limit,
-> - HSTS/CSP ve temel güvenlik başlıkları
-> katmanlarını uygular.
+**AI Destekli Kripto Analiz ve Karar Destek Platformu**  
+Güvenlik-sertleştirmesi etkin, Docker/K8s hazır, test ve CI/CD ile üretime uygun monorepo.
 
-## 🚀 Production Hazırlığı (Tamamlandı)
-Bu repo, aşağıdaki production bileşenleriyle güncellendi:
+_Lisans: MIT • Dizinler: backend · frontend · deploy/k8s · migrations · tests · scripts_
 
-- **SSL/TLS**: `deploy/nginx/orcaquant.conf` + Let's Encrypt entegrasyonu (Certbot ile otomasyon)
-- **DB Production Konfigürasyonu**: `.env.production.example` yeni değişkenler, bağlantı havuzu, read-only flag’leri
-- **Load Balancer & CDN**: Nginx reverse proxy ayarı, Cloudflare uyumlu başlıklar
-- **Backup Stratejisi**: `scripts/backup_db.sh` + `scripts/restore_db.sh` ve `/.github/workflows/nightly-backup.yml`
-- **Monitoring & Logging**: `monitoring/docker-compose.monitoring.yml` (Prometheus+Grafana+Loki), `monitoring/prometheus.yml`,
-  `monitoring/loki-config.yml`, örnek dashboard ve backend `/metrics` uç noktası
+</div>
 
-### Hızlı Başlangıç (Monitoring yerel)
-```bash
-docker compose -f monitoring/docker-compose.monitoring.yml up -d
-# Prometheus: http://localhost:9090  Grafana: http://localhost:3000  Loki: http://localhost:3100
-```
+---
 
-## 📜 Legal & Compliance (Tamamlandı)
-`frontend/legal/` altında:
-- `privacy.html` (Gizlilik Politikası)
-- `terms.html` (Kullanım Şartları)
-- `kvkk.html` (KVKK Aydınlatma Metni – ana unsurlar dahil)
-- `risk.html` (Finansal risk bildirimi)
+## İçindekiler
+1. [Genel Bakış](#genel-bakış)
+2. [Mimari ve Dizin Yapısı](#mimari-ve-dizin-yapısı)
+3. [Önkoşullar](#önkoşullar)
+4. [Hızlı Başlangıç](#hızlı-başlangıç)
+5. [Ortam Değişkenleri](#ortam-değişkenleri)
+6. [Çalıştırma: Geliştirme / Docker / Staging / Production](#çalıştırma-geliştirme--docker--staging--production)
+7. [Veritabanı Migrasyonları](#veritabanı-migrasyonları)
+8. [Test, Lint ve Pre-commit](#test-lint-ve-pre-commit)
+9. [WebSocket / Realtime](#websocket--realtime)
+10. [Güvenlik (Özet)](#güvenlik-özet)
+11. [Günlükleme, İzleme ve Sorun Giderme](#günlükleme-izleme-ve-sorun-giderme)
+12. [Dağıtım (Nginx / K8s)](#dağıtım-nginx--k8s)
+13. [Katkı Rehberi](#katkı-rehberi)
+14. [Lisans](#lisans)
 
-## 🎨 UX Geliştirmeleri (Tamamlandı)
-- Responsive meta ve layout iyileştirmeleri
-- `frontend/static/ui.js` ile **loading state** + **hata yönetimi** + erişilebilir toast
-- `frontend/static/notify.js` ile **real-time bildirim** altyapısı (Socket.IO tercih; yoksa güvenli fallback)
+---
 
-## 💼 İş Geliştirme (Tamamlandı)
-- `frontend/landing.html` (Landing & pazarlama)
-- `frontend/onboarding.html` (Onboarding sihirbazı)
-- `frontend/faq.html` (SSS)
-- `frontend/support.html` (Müşteri destek iletişim sayfası)
+## Genel Bakış
 
-## 🔐 Notlar
-- Üretimde sırları `.env` yerine bir Secrets Manager ile yönetin.
-- Nginx için `HSTS`, `X-Content-Type-Options`, `X-Frame-Options` başlıkları aktiftir.
+OrcaQuant; Flask tabanlı bir API, yardımcı servisler ve hafif bir frontend katmanıyla kripto piyasalarındaki verileri toplayan, analiz eden ve kullanıcıya anlaşılır biçimde sunan bir platformdur. Depo, hızla yerelde çalıştırılabilecek şekilde tasarlanmış; Docker Compose ve Kubernetes örnekleri, test altyapısı ve güvenlik sertleştirmeleriyle üretim ortamına kadar uzanan uçtan uca bir kurulum sağlar.
 
-## 📈 İzleme & Uyarı
-- `/metrics` uç noktası Prometheus uyumlu metrik verir.
-- Grafana dashboard örneği: `monitoring/grafana/provisioning/dashboards/orcaquant-overview.json`
+> **WSGI giriş noktası (prod/staging):** `app.secure_app:app`  
+> Bu sarmalayıcı CORS allowlist, global/login rate limit, HSTS/CSP gibi güvenlik başlıklarını katmanlı şekilde uygular. (Detay: aşağıdaki **Güvenlik (Özet)**)  
 
-## 🔁 Yedekleme
-GitHub Actions gece yedeği: `/.github/workflows/nightly-backup.yml`
-AWS S3 yapılandırılmışsa S3’e yükler; değilse build artifact olarak saklar.
+---
 
-## 🤝 Destek
-`frontend/support.html` üzerindeki formu kullanın veya `support@orcaquant.com`.
+## Mimari ve Dizin Yapısı
 
-## Ortam Değişkenlerini Hazırlama
-`.env.example` dosyanız branch’ler arasında farklı olabilir. Çatışma yaşamamak için
-gerekli yeni anahtarları idempotent bir script ile ekliyoruz:
-
-```bash
-python3 scripts/ensure_env_keys.py --apply
-# sadece kontrol: python3 scripts/ensure_env_keys.py --check
-```
-
-Üretimde sırları `.env` yerine **AWS Secrets Manager** veya **Azure Key Vault** üzerinden sağlayın.
-
-## Kurulum
-
-1. Ortam değişkenlerini `.env.example` üzerinden oluşturun.
-2. Veritabanı migrasyonlarını çalıştırın.
-3. Uygulamayı başlatın.
-
-### Prod güvenlik notları (özet)
-- JWT: HS512, kısa ömürlü access (15 dk), refresh (30 gün) + **rotate-on-use** ve **revoke (Redis JTI)**.
-- Sırlar: **Secrets Manager/Key Vault**; `JWT_KEY_VERSION` ile rotasyon. `scripts/rotate_jwt_secret.py` aracı mevcuttur.
-- Giriş güvenliği: parola politikası (Argon2id) + pwned kontrolü, brute-force lockout, route başına rate-limit.
-- CSRF: Cookie tabanlı oturum kullanıyorsanız HMAC+timestamp token zorunludur.
-- Web güvenliği: HSTS (preload), katı CSP, XFO=DENY, XCTO=nosniff.
-- CI: `pip-audit` ve **SBOM** üretimi (`.github/workflows/security.yml`).
-
-Bu proje Flask tabanlı bir kripto para analiz uygulamasıdır. Depo iki ana kısımdan oluşur:
-
-* **backend/** - Flask API ve analiz servisleri
-* **frontend/** - Basit HTML arayüzü
-
-Ek olarak `scripts/` dizininde yardımcı araçlar bulunur.
-
-Hızlı bir analiz denemek için `scripts/crypto_ta.py` dosyasını çalıştırabilirsiniz.
-Bu betik CoinGecko servisine erişim olmadığında örnek verilerle teknik
-analiz göstergelerini hesaplar.
-
-Gerçek zamanlı fiyat bilgisini almak için `backend/utils/price_fetcher.py`
-içindeki `fetch_current_price` fonksiyonu kullanılabilir. Ağ sorunu olduğunda
-fonksiyon `None` döndürür ve görevler bunu ele alacak şekilde tasarlanmıştır.
-
-Backend klasör yapısı aşağıdaki gibidir:
+Monorepo sade ve izlenebilir bir yapı izler:
 
 ```
-backend/
-├── __init__.py           # create_app fonksiyonunu dışa açar
-├── api/
-│   ├── __init__.py       # API Blueprint tanımı
-│   └── routes.py         # Analiz endpointleri
-├── auth/
-│   ├── __init__.py       # Auth Blueprint'i
-│   └── routes.py         # Kullanıcı işlemleri
-├── admin_panel/
-│   ├── __init__.py       # Admin Blueprint'i
-│   └── routes.py         # Yönetici paneli
-├── db/
-│   ├── __init__.py       # SQLAlchemy db nesnesi
-│   └── models.py         # Veritabanı modelleri
-├── core/
-│   ├── __init__.py       # Boş
-│   └── services.py       # YTD servis sınıfları
-├── tasks/
-│   ├── __init__.py       # Celery paket tanımı
-│   └── celery_tasks.py   # Görevler
-├── requirements.txt
-├── .env.example
-└── Dockerfile
+.
+├─ .github/               # CI/CD ve güvenlik iş akışları
+├─ backend/               # Flask API, iş mantığı, servisler
+├─ frontend/              # Basit HTML/JS arayüz (MPA)
+├─ deploy/
+│  └─ k8s/                # Kubernetes örnek manifestleri
+├─ migrations/            # Flask-Migrate veritabanı değişiklikleri
+├─ tests/                 # Pytest tabanlı testler
+├─ scripts/               # Yardımcı scriptler (env, güvenlik, vb.)
+├─ docker-compose.yml     # Yerel geliştirme
+├─ docker-compose.staging.yml
+├─ docker-compose.ci.yml
+├─ WEBSOCKET_README.md    # Realtime/WebSocket notları
+└─ README.md
 ```
 
-Ana dizinlerin sorumluluklari:
-- **api/**: REST API uc noktalari
-- **auth/**: kullanici kaydi, giris ve JWT yonetimi
-- **admin_panel/**: yonetici paneli rotalari
-- **core/**: analiz servisleri ve is mantigi
-- **db/**: SQLAlchemy modelleri
-- **tasks/**: Celery gorev tanimlari
-- **config.py**: ortam tabanli ayarlar
-- **frontend/**: statik HTML ve JavaScript
-- **migrations/**: veritabani guncelleme scriptleri
-- **tests/**: otomatik testler
+> Not: Depodaki bazı yardımcı klasörler (örn. `infra/`, `docs/`, `storage/`) operasyonel araçlar ve örnek veriler içerir.
 
-## Proje Mimarisi ve Teknoloji Yigini
+---
 
-Bu proje servis odakli bir mimariye sahiptir. Backend katmani Flask uzerinde calisir ve REST API sunar. Celery agir islemleri arka planda yurutur ve zamanlanmis gorevleri yonetir. SQLAlchemy veritabanina erisim saglar, Redis hem onbellek hem de Celery brokeri olarak kullanilir. Docker tum servislerin izole calismasini kolaylastirir. Frontend mevcutta basit bir MPA yapisindadir ancak uzun vadede React benzeri bir framework ile SPA mimarisine gecis hedeflenmektedir. Flask'in sadeligi ve Python ekosistemiyle uyumu hizli prototipleme imkani saglar.
+## Önkoşullar
 
+- Python 3.10+ (venv önerilir)
+- Docker & Docker Compose (isteğe bağlı ama önerilir)
+- Redis ve bir SQL veritabanı (PostgreSQL önerilir)
+- Node.js (sadece frontend geliştirme/derleme akışları için gerekebilir)
 
-Proje kök dizininde `wsgi.py` adlı bir çalıştırıcı dosya bulunur. Bu dosya
-`backend.create_app()` fonksiyonunu kullanarak Flask uygulamasını başlatır.
+---
 
+## Hızlı Başlangıç
 
-## Mobil Uyumlu Panel
-
-Admin ve kullanıcı sayfaları mobil cihazlarda da rahat kullanılabilmesi için responsive hâle getirildi. HTML dosyalarına `viewport` meta etiketi eklendi ve tablolar `overflow-x-auto` sınıfı ile yatay kaydırılabilir yapıldı. Böylece küçük ekranlarda menü ve kritik işlemler erişilebilir oldu.
-
-## Kurulum
-
-1. Depoyu klonlayın ve gerekli bağımlılıkları kurun:
+En hızlı yol Docker Compose:
 
 ```bash
-pip install -r backend/requirements.txt
+# 1) Bağımlılıklar ve servisler
+cp .env.example .env  # anahtarları doldurun
+docker-compose up --build
 ```
 
-Flask-Migrate ile veritabanı şema değişikliklerini yönetmek için ilk kez şu adımları uygulayın:
+Yerel Python ortamıyla geliştirme:
 
 ```bash
-flask db init
-flask db migrate -m "initial"
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env    # anahtarları doldurun
+
+# DB hazırla (ilk kurulum)
 flask db upgrade
-```
 
-2. `.env.example` dosyasını `.env` olarak kopyalayın ve gerekli API anahtarlarını doldurun.
-
-## 🔐 Güvenlik Yapılandırması
-
-Uygulamayı çalıştırmadan önce güvenlik kontrollerini yapın:
-
-```bash
-python scripts/security_check.py
-```
-
-Bu script, JWT token güvenliği, şifreleme anahtarları ve diğer güvenlik ayarlarını kontrol eder.
-
-3. Gerekli konfigürasyon sınıfı `FLASK_ENV` değişkeni ile seçilir. Varsayılan
-   değer `development`'tır. Örneğin test ortamı için:
-
-```bash
-export FLASK_ENV=testing
-```
-
-4. Uygulamayı yerel ortamda çalıştırmak için:
-
-```bash
+# Uygulamayı başlat (geliştirme)
 python wsgi.py
 ```
 
-## Docker ile Çalıştırma
+---
 
-Docker yüklüyse projeyi şu komutla hızlıca başlatabilirsiniz:
+## Ortam Değişkenleri
 
+Tüm değişkenler için **`.env.example`** dosyasına bakın. Üretimde sırları `.env` yerine bir gizli yönetim servisiyle sağlayın (örn. AWS Secrets Manager, Azure Key Vault).
+
+Sık kullanılan anahtarlar:
+
+| Değişken                  | Açıklama                                      |
+|---------------------------|-----------------------------------------------|
+| `FLASK_ENV`               | `development` / `staging` / `production`     |
+| `DATABASE_URL`            | SQL bağlantısı (örn. Postgres DSN)            |
+| `REDIS_URL`               | Redis bağlantısı                              |
+| `SECRET_KEY`              | Flask gizli anahtarı                          |
+| `JWT_SECRET_KEY`          | JWT için gizli anahtar                        |
+| `CORS_ALLOWLIST`          | Virgülle ayrık origins                        |
+| `RATE_LIMIT`              | Varsayılan hız limiti (örn. `200/minute`)     |
+| `SECURE_SSL_REDIRECT`     | Prod’da HTTPS zorunluluğu (true/false)       |
+
+> **İpucu:** `scripts/ensure_env_keys.py --apply` ile eksik anahtarları güvenli şekilde ekleyebilirsiniz (idempotent yaklaşım).
+
+---
+
+## Çalıştırma: Geliştirme / Docker / Staging / Production
+
+### Geliştirme (yerel)
+```bash
+source .venv/bin/activate
+export FLASK_ENV=development
+python wsgi.py
+```
+
+### Docker (yerel)
 ```bash
 docker-compose up --build
 ```
 
-## Production Kurulumu (Gunicorn ve Nginx)
-
-Gerçek bir sunucuda uygulamayı yayınlamak için `app.py` dosyası üzerinden
-`create_app` fonksiyonunu kullanarak Gunicorn çalıştırabilirsiniz:
-
+### Staging
 ```bash
-gunicorn -w 4 -b 127.0.0.1:5000 'app:create_app()'
+docker-compose -f docker-compose.staging.yml up -d --build
 ```
 
-Ardından Nginx'i ters proxy olarak yapılandırıp statik dosyaları servis
-edecek şekilde ayarlayabilirsiniz. Örnek bir konfigürasyon:
+### Production
+**WSGI giriş noktası:** `app.secure_app:app`
 
+```bash
+# Örnek Gunicorn başlatma
+gunicorn -c gunicorn.conf.py app.secure_app:app
+```
+
+**Nginx (özet)**
 ```nginx
 server {
-    listen 80;
-    server_name admin.example.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    location /static/ {
-        alias /path/to/your/frontend/;
-    }
+  listen 80;
+  server_name your.domain;
+  location / {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+  location /static/ {
+    alias /path/to/frontend/;
+  }
 }
 ```
 
-HTTPS sertifikası için Let's Encrypt (`certbot --nginx`) ve güvenlik için UFW
-kuralları eklemeniz önerilir. Uygulamanın arka planda kalıcı olarak
-çalışması için Supervisor kullanılabilir.
+TLS için Let's Encrypt (`certbot`) önerilir.
 
-## 🛡️ Güvenlik Özellikleri
+---
 
-Bu uygulama aşağıdaki güvenlik özelliklerini içerir:
+## Veritabanı Migrasyonları
 
-- **Gelişmiş JWT Token Yönetimi**: Access ve refresh token'lar ile güvenli kimlik doğrulama
-- **Token Blacklisting**: Çıkış yapıldığında token'ların geçersiz kılınması
-- **Rate Limiting**: API istekleri için hız sınırlandırması
-- **CSRF Koruması**: Cross-Site Request Forgery saldırılarına karşı koruma
-- **Güvenlik Event Logging**: Tüm güvenlik olaylarının kayıt altına alınması
-- **IP ve User Agent Analizi**: Şüpheli aktivitelerin tespit edilmesi
-- **Güçlü Şifre Politikası**: Minimum güvenlik gereksinimleri
-- **Session Yönetimi**: Güvenli oturum işlemleri
-- **Security Headers**: XSS, CSRF ve diğer saldırılara karşı HTTP başlıkları
-
-### Token Güvenliği
-
-- Access token'lar 15 dakika geçerlidir
-- Refresh token'lar 7 gün geçerlidir
-- Token'lar Redis'te blacklist olarak takip edilir
-- Hassas işlemler için fresh token gereksinimi
-- Tüm token'lar unique JTI (JWT ID) içerir
-
-## Testler
-
-Testleri çalıştırmak için `pytest` kullanılabilir:
+Flask-Migrate kullanılır:
 
 ```bash
-pytest
-```
-Testler unit, integration ve functional klasorlerine ayrilacak sekilde organize edilir. Kod kalitesi icin `pytest-cov` kullanilarak kapsama raporu alinabilir:
+# ilk kurulumdan sonra
+flask db upgrade
 
+# şema güncellemesi geliştirme aşamasında
+flask db migrate -m "açıklayıcı mesaj"
+flask db upgrade
+```
+
+> CI/CD’de otomatik `db upgrade` akışını staging/prod dağıtımı sırasında tetikleyebilirsiniz.
+
+---
+
+## Test, Lint ve Pre-commit
+
+### Test
 ```bash
-pytest --cov=backend --cov=frontend tests/
+pytest -q
 ```
 
-## API Dokumantasyonu
+Coverage ayarları için `.coveragerc` mevcuttur. Test izolasyonu için fixture’lar ve dummy veriler `tests/` altındadır.
 
-Backend API'lari OpenAPI (Swagger) standardina uygun sekilde belgelenmektedir. Calisan bir sunucu uzerinde `/api/docs` adresinden interaktif dokumanlara erisilebilir. Bu yontem frontend gelistiricileri icin net bir kontrat saglar ve API surumlerini takip etmeyi kolaylastirir.
-
-### Analytics Uc Noktalari
-
-Yonetim panelindeki gelismis raporlar icin eklenen API'lar:
-
-- `/api/admin/analytics/summary` – Belirli tarihler arasinda aktif kullanici, yeni kayit, odeme ve pasif kullanici sayilarini dondurur.
-- `/api/admin/analytics/plans` – Abonelik planlarina gore kullanici dagilimini listeler.
-- `/api/admin/analytics/usage` – Yapilan toplam tahmin ve sistem olayi sayisini dondurur.
-
-### Orkestrasyon (Konsensüs) API
-Rejim kapısı + konsensüs ile çoklu motor çıktısını tek karara indirger.
-
-```
-POST /api/decision/score-multi
-{
-  "symbol": "BTCUSDT",
-  "timeframe": "1h",
-  "engines": ["KM1","KM2","KM3","KM4"],
-  "ohlcv": [
-    {"ts":"2025-08-24T12:00:00Z","open":...,"high":...,"low":...,"close":...,"volume":...}
-  ],
-  "params": {
-    "KM1": {"ema_fast":12,"ema_slow":48},
-    "KM2": {"atr_window":14}
-  },
-  "account_value": 100000
-}
+### Lint & Format
+Proje `pre-commit` ile standart hale getirilmiştir:
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run -a
 ```
 
-- `symbol` ve `timeframe` alanları zorunludur.
-- `ohlcv` verisi ISO zaman damgası ve sayısal OHLCV kolonlarını içermeli, en az 50 bar barındırmalıdır.
-- `engines` boş bırakılırsa kayıtlı tüm motorlar çalıştırılır; bilinmeyen motor ID'leri hata döndürür.
-- `params` altındaki anahtarlar motor kimlikleriyle eşleşmelidir.
+> Güvenlik taramaları ve sızmış sır kontrolleri için repo kökünde `gitleaks` yapılandırması mevcuttur.
 
-**Örnek yanıt**
-```json
-{
-  "symbol":"BTCUSDT",
-  "timeframe":"1h",
-  "regime":{"label":"mixed","trend_strength":0.0012,"vol_pct":0.018},
-  "consensus":{
-    "label":"buy",
-    "score_raw":0.32,
-    "expected_return":0.046,
-    "confidence":0.61,
-    "conf_int":[0.01,0.08],
-    "horizon_days":5.2,
-    "position_fraction":0.02,
-    "position_value":2000.0,
-    "stop_loss":-0.032,
-    "take_profit":0.078,
-    "rationale":["KM1:buy(0.62)","KM2:hold(0.40)","KM3:buy(0.65)","KM4:hold(0.00)"],
-    "top_drivers":["KM3","KM1","KM2"]
-  },
-  "engines": { "...": "tekil motor çıktıları" }
-}
+---
+
+## WebSocket / Realtime
+
+Gerçek zamanlı veri akışı ve Socket/WS kullanım notları için **`WEBSOCKET_README.md`** dosyasına bakın.
+
+---
+
+## Güvenlik (Özet)
+
+**WSGI Sarmalayıcı:** `app.secure_app:app` ile:
+- **CORS allowlist** (sıkı origin kontrolü)
+- **Rate limit**: global ve oturum açma uç noktaları için ayrı limitler
+- **HTTP güvenlik başlıkları**: HSTS, katı CSP, `X-Frame-Options=DENY`, `X-Content-Type-Options=nosniff`
+
+**Kimlik Doğrulama ve Token Yönetimi**
+- Kısa ömürlü **access** (örn. 15 dk) ve **refresh** (örn. 30 gün) token
+- **Token rotasyonu** ve **JTI revoke** (Redis kullanımı)
+- **Argon2id** ile parola karması, pwned-password kontrolü
+
+**Uygulama Güvenliği**
+- Giriş denemelerinde kilitleme (brute-force)
+- Girdi doğrulama ve XSS korunumu
+- CSRF koruması (cookie tabanlı akışlarda HMAC+timestamp yaklaşımı)
+- CI’da bağımlılık taraması ve SBOM üretimi
+
+> Üretimde sırları **Secrets Manager/Key Vault** ile yönetin; `.env` yalnızca yerel geliştirme için.
+
+---
+
+## Günlükleme, İzleme ve Sorun Giderme
+
+- **Günlükleme**: Yapılandırılabilir JSON/structured logging önerilir. Konu korelasyonu için `request-id`/`trace-id` ekleyin.
+- **İzleme**: Prod ortamında temel sağlık uç noktaları (`/healthz`, `/readiness`) ve metrikler devreye alın.
+- **Sorun Giderme**:
+  - 4xx artışı → CORS/rate-limit/log girişlerini kontrol edin.
+  - 5xx artışı → DB/Redis bağlantısı ve servis bağımlılıklarını doğrulayın.
+  - Yük altında yavaş yanıt → DB indeksleri, cache katmanı ve N+1 sorgu kontrolleri.
+
+---
+
+## Dağıtım (Nginx / K8s)
+
+### Nginx
+Yukarıdaki üretim kesitini temel alarak TLS ve güvenlik başlıklarını (HSTS/CSP) etkinleştirin. Statik dosyaları `frontend/` üzerinden servis edin.
+
+### Kubernetes (örnek)
+`deploy/k8s/` altındaki manifestleri, ortamınıza göre `image`, `envFrom/secretRef` ve `resources` alanlarıyla uyarlayın.  
+Health probe’lar için:
+```yaml
+livenessProbe:
+  httpGet: { path: /healthz, port: 8000 }
+readinessProbe:
+  httpGet: { path: /readiness, port: 8000 }
 ```
 
-## Guvenlik Notlari
-
-Sifreler `werkzeug` kutuphanesi ile guclu bicimde hashlenir ve JWT tabanli oturumlar kullanilir. Kullanici girislerinde olusan **refresh token** degeri `user_sessions` tablosunda saklanir ve token yenileme islemlerinde bu tablo uzerinden dogrulama yapilir. CSRF korumasi icin her istek `X-CSRF-Token` basligi ile dogrulanir. RBAC modeli ile yetki kontrolu saglanir. Flask-Limiter kullanilarak API istekleri oran sinirlariyla korunur. Hassas islemler Celery uzerinden gerceklestirilir ve kritik olaylarda `send_security_alert_task` tetiklenerek loglama yapilir.
-
-## Dosya Açıklamaları
-
-Bu bölümde proje deposundaki ana dosya ve klasörlerin kısa açıklamaları listelenmiştir. Uygulamanın yapısı hakkında hızlı bir bakış sağlar.
-
-### Kök Dizin
-
-- `wsgi.py` - Flask uygulamasını başlatan giriş noktası.
-- `.env.example` ve `.env` - Ortam değişkenlerini tanımlayan örnek dosyalar.
-- `.github/` - CI iş akışlarının yer aldığı klasör.
-- `docker-compose.yml` - Gerekli servisleri içeren Docker bileşen tanımı.
-- `scripts/` - Kurulum ve geliştirmeye yardımcı betikler.
-- `backend/` - Sunucu tarafı uygulama kodları.
-- `frontend/` - Statik HTML dosyaları ve istemci betikleri.
-- `migrations/` - Veritabanı göç dosyaları.
-- `tests/` - Pytest birim testleri.
-
-### `backend/` Klasörü
-
-- `__init__.py` - `create_app` fonksiyonunu içerir, uygulamayı ve uzantıları yapılandırır.
-- `config.py` - Ortama özel yapılandırma sınıfları.
-- `constants.py` - Abonelik planı ile ilgili sabit değerler.
-- `Dockerfile` - API servisinin Docker imajı için talimatlar.
-- `requirements.txt` - Backend bağımlılık listesi.
-- `.env.example` - Backend için örnek ortam değişkenleri.
-
-Alt klasörler:
-
-* `api/`
-  * `__init__.py` - API Blueprint tanımı.
-  * `routes.py` - Kripto para analiz uç noktaları.
-* `auth/`
-  * `__init__.py` - Kimlik doğrulama Blueprint'i.
-  * `jwt_utils.py` - JWT üretme ve doğrulama yardımcıları.
-  * `middlewares.py` - JWT ve CSRF kontrolü yapan dekoratörler.
-  * `routes.py` - Kullanıcı kayıt/giriş işlemleri.
-* `admin_panel/`
-  * `__init__.py` - Yönetici paneli Blueprint'i.
-  * `routes.py` - Yöneticiye özel API uç noktaları.
-* `db/`
-  * `__init__.py` - SQLAlchemy `db` nesnesi.
-  * `models.py` - Kullanıcı, oturum ve abonelik tabloları gibi veritabanı modelleri.
-* `core/`
-  * `__init__.py` - Boş modül dosyası.
-  * `services.py` - Analiz ve tahmin işlemlerini yöneten sınıflar.
-* `tasks/`
-  * `__init__.py` - Celery paket tanımı.
-  * `celery_tasks.py` - Arka plan görevleri ve zamanlanmış işler.
-* `frontend/`
-  * `__init__.py` - Basit Blueprint.
-  * `routes.py` - HTML şablonlarını sunan rotalar.
-* `payment/`
-  * `routes.py` - Ödeme işlemleri için API uç noktaları.
-* `templates/` - Sunucu taraflı render edilen Jinja2 şablonları.
-* `utils/`
-  * `alarms.py` - Slack/Telegram gibi yerlere uyarı gönderen yardımcılar.
-  * `decorators.py` - Abonelik planı ve izin kontrolleri için dekoratörler.
-  * `helpers.py` - Ortak yardımcı fonksiyonlar.
-  * `rbac.py` - Rol tabanlı erişim kontrolü kurulum fonksiyonları.
-
-### `frontend/` Klasörü
-
-Ana klasördeki `.html` dosyaları statik sayfalardır: `index.html`, `giris.html`, `kayit.html`, `abonelik.html`, `dashboard.html`, `sifremi-unuttum.html`, `reset-password.html` ve `prediction-display.html`. Bunlar Flask tarafından servis edilen basit arayüzleri içerir.
-
-`static/` klasöründe istemci JavaScript kodları (`api.js`) ve diğer statik varlıklar bulunur.
-
-Ek olarak `admin/promo-codes-advanced.html` dosyası React ve Tailwind kullanılarak hazırlanmış gelişmiş promosyon kodu oluşturma formu örneğini içerir.
-
-### Diğer Klasörler
-
-- `migrations/` - Alembic tarafından oluşturulacak veritabanı göç dosyaları için yer tutucu.
-- `tests/` - Uygulamanın temel işlevlerini doğrulayan Pytest testleri.
-- `scripts/` - Ortam kurulumuna yardımcı betikler. Burada ayrıca `crypto_ta.py`
-  dosyası bulunur ve çevrimdışı modda örnek teknik analiz yapar.
-### Dizin Yapısı
-
-```text
-.
-├── backend/
-│   ├── admin_panel/
-│   ├── api/
-│   ├── auth/
-│   ├── payment/
-│   ├── core/
-│   ├── db/
-│   ├── frontend/
-│   ├── tasks/
-│   ├── templates/
-│   ├── utils/
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
-├── frontend/
-│   ├── abonelik.html
-│   ├── abonelik2.html
-│   ├── dashboard.html
-│   ├── prediction-display.html
-│   ├── frontend-crypto-analysis-dashboard
-│   ├── giris.html
-│   ├── homepage-unregistered.html
-│   ├── kayit.html
-│   ├── reset-password.html
-│   ├── sifremi-unuttum.html
-│   ├── ytdcrypto-admin-dashboard
-│   └── static/
-├── migrations/
-├── scripts/
-├── tests/
-├── wsgi.py
-├── docker-compose.yml
-├── README.md
-├── LICENSE
-├── .env.example
-└── .env
-```
+---
 
 ## Katkı Rehberi
 
-Projeye katkıda bulunmak isterseniz aşağıdaki adımları takip edebilirsiniz:
+1. Issue açın veya mevcut bir issue’yu üzerine alın.
+2. Feature/fix için bir branch açın.
+3. Testleri ve pre-commit kontrollerini çalıştırın.
+4. Açıklayıcı bir PR oluşturun (değişiklik kapsamı, test notları, riskler).
 
-1. Depoyu çatallayın ve kendi hesabınıza kopyalayın.
-2. Geliştirme için yeni bir dal (`git checkout -b özellik-adi`) oluşturun.
-3. Yaptığınız değişiklikleri açık ve anlamlı commit mesajlarıyla kaydedin.
-4. Değişikliklerinizi GitHub üzerinde bir **Pull Request** olarak gönderin.
+Kod standartlarını ve güvenlik kontrollerini korumak için küçük, odaklı PR’lar tercih edilir.
 
-Katkılarınız her zaman memnuniyetle karşılanır. Sorularınız için yeni bir konu
-açabilir veya mevcut tartışmalara katılabilirsiniz.
+---
 
 ## Lisans
 
-Bu proje MIT lisansı altında sunulmaktadır. Ayrıntılar için `LICENSE` dosyasına
-bakabilirsiniz.
+MIT — Telif hakkı (c) sahiplerine aittir. Ayrıntı için `LICENSE` dosyasına bakın.
 
+---
 
-## Secrets & ENV Yönetimi
+### Hızlı Referans
 
-Üretim ortamında tüm hassas bilgiler GitHub Actions Secrets üzerinden
-yönetilir. Yerel geliştirmede gerekli değerler `.env` dosyalarına yazılır; bu
-dosyalar depoya eklenmez ve `.gitignore` tarafından korunur. Örnek
-konfigürasyonlar için `*.env.example` dosyalarına bakabilirsiniz.
+- **Yerel:** `python wsgi.py` veya `docker-compose up --build`
+- **WSGI (prod):** `gunicorn -c gunicorn.conf.py app.secure_app:app`
+- **DB migrasyon:** `flask db upgrade`
+- **Test:** `pytest -q`
+- **WS/Realtime:** `WEBSOCKET_README.md`
