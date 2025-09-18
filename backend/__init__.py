@@ -20,6 +20,7 @@ from .config import get_config
 from .utils.logging_setup import setup_logging, setup_json_logging, with_request_id
 from .utils.error_handlers import register_error_handlers as register_enhanced_error_handlers
 from .utils.cache import init_l1_cache_from_config
+from .realtime import init_realtime
 from .db import db as db
 
 # WebSocket imports
@@ -233,6 +234,9 @@ def create_app(config_name: str = None) -> Flask:
     config_name = config_name or os.getenv('FLASK_ENV', 'development')
     config = get_config(config_name)
     app.config.from_object(config)
+    app.config.setdefault("SECRET_KEY", "change-this-in-production")
+    app.config.setdefault("CORS_ORIGINS", ["http://localhost:5173", "http://localhost:3000"])
+
     
     # Enhanced logging setup with JSON support
     if app.config.get('LOG_LEVEL') and HAS_SENTRY:
@@ -278,6 +282,17 @@ def create_app(config_name: str = None) -> Flask:
     global socketio
     socketio = websocket_manager.socketio
     logger.info("WebSocket manager initialized successfully")
+
+    try:
+        realtime_instance = init_realtime(app)
+        if realtime_instance:
+            socketio = realtime_instance
+            app.socketio = realtime_instance
+        else:
+            app.socketio = socketio
+    except Exception as exc:
+        logger.error(f"Realtime initialization failed: {exc}")
+        app.socketio = socketio
 
     # Initialize database
     # Adjust engine options for in-memory SQLite to avoid invalid pool args
@@ -734,6 +749,23 @@ def register_blueprints(app: Flask):
         app.register_blueprint(plan_admin_limits_bp)
     except Exception:
         pass
+
+    # SPA/Market Blueprints
+    try:
+        from .routes.market import bp_market
+        app.register_blueprint(bp_market)
+    except Exception as exc:
+        logger.warning(f"Market blueprint not registered: {exc}")
+    try:
+        from .routes.portfolio import bp_portfolio
+        app.register_blueprint(bp_portfolio)
+    except Exception as exc:
+        logger.warning(f"Portfolio blueprint not registered: {exc}")
+    try:
+        from .routes.auth_extra import bp_auth_extra
+        app.register_blueprint(bp_auth_extra)
+    except Exception as exc:
+        logger.warning(f"Auth extra blueprint not registered: {exc}")
 
     # Frontend Blueprint
     from .frontend import frontend_bp

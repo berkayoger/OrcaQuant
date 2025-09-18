@@ -194,6 +194,18 @@ def admin_required():
     return wrapper
 
 
+def require_jwt(func):
+    """Require a valid JWT and inject the current user."""
+    @wraps(func)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        user = getattr(g, "current_user", None)
+        if user is None:
+            return jsonify({"error": "Authentication required"}), 401
+        return func(user, *args, **kwargs)
+    return wrapper
+
+
 # Örnek Kullanım:
 # from backend.auth.middlewares import admin_required
 #

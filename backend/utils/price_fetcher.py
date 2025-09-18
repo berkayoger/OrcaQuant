@@ -6,12 +6,20 @@ import requests
 from loguru import logger
 
 
+SYMBOL_MAP = {
+    "BTCUSDT": "bitcoin",
+    "ETHUSDT": "ethereum",
+    "ADAUSDT": "cardano",
+    "DOTUSDT": "polkadot",
+}
+
 def fetch_current_price(symbol: str = "bitcoin", currency: str = "usd") -> float | None:
     """Return the current price of ``symbol`` in the given ``currency``.
 
     On any error or network issue ``None`` is returned instead of raising
     an exception.
     """
+    symbol = SYMBOL_MAP.get(symbol.upper(), symbol)
     url = "https://api.coingecko.com/api/v3/simple/price"
     params = {"ids": symbol, "vs_currencies": currency}
     try:
