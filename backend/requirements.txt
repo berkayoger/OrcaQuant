@@ -1,6 +1,8 @@
 flask==3.0.3
 flask-cors==4.0.0
 flask-limiter==3.6.0
+itsdangerous>=2.1.2
+SQLAlchemy>=2.0.0
 gunicorn==22.0.0
 eventlet==0.36.1
 flask-socketio==5.3.6
