@@ -8,6 +8,22 @@ from typing import Iterator
 import pytest
 from flask import Flask, request
 
+
+# --- Lightweight fallback for pytest-rerunfailures --------------------------
+def pytest_addoption(parser):  # pragma: no cover - test runner hook
+    """Register a stub `--reruns` option when the plugin is unavailable."""
+
+    try:
+        parser.addoption(
+            "--reruns",
+            action="store",
+            default=0,
+            help="number of times to re-run failed tests (stub when plugin missing)",
+        )
+    except (ValueError, AttributeError):
+        # Option already registered by real plugin; nothing else to do.
+        pass
+
 # --- Ortam değişkenleri (deterministik & offline) ---------------------------
 os.environ.setdefault("COINGECKO_SHIM_OFFLINE", "1")
 os.environ.setdefault("COINGECKO_MIN_INTERVAL_SEC", "0")

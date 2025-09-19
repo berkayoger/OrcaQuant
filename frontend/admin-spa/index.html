@@ -1,13 +1,190 @@
 <!doctype html>
 <html lang="tr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YTD Admin</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-  </head>
-  <body class="bg-neutral-900 text-neutral-50">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>OrcaQuant Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root { --bg:#0f1115; --card:#151922; --muted:#9499a6; --text:#e7e9ee; --brand:#22ab94; }
+    *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,sans-serif}
+    header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #1f2430;background:#0b0d12}
+    .chip{background:#121722;border:1px solid #232b3a;padding:6px 10px;border-radius:999px;color:var(--muted)}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 20px}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .card{background:var(--card);border:1px solid #1f2430;border-radius:14px;padding:14px}
+    .card h3{margin:0 0 8px 0;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+    .kpi{font-size:24px;font-weight:700}
+    .filters{display:flex;gap:8px;margin:18px 0}
+    select,input,button{background:#0f1420;border:1px solid #263147;color:var(--text);padding:8px 10px;border-radius:10px}
+    button.brand{background:var(--brand);color:#05251f;border:none;font-weight:700}
+    table{width:100%;border-collapse:collapse;overflow:hidden;border-radius:12px}
+    th,td{padding:10px 12px;border-bottom:1px solid #1f2430}
+    th{color:#a9afbf;text-align:left;font-size:12px;text-transform:uppercase}
+    tr:hover td{background:#121722}
+    .right{display:flex;justify-content:flex-end;gap:8px}
+    .badge{padding:2px 8px;border-radius:999px;border:1px solid #2a3547;color:#b7bdd0;font-size:12px}
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:10px;align-items:center}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <strong>OrcaQuant Admin</strong>
+      <span class="chip" id="api-status">API: …</span>
+    </div>
+    <div class="row">
+      <button id="refresh" class="brand">Yenile</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="cards" id="kpis">
+      <div class="card"><h3>Toplam Kullanıcı</h3><div class="kpi" id="kpi-total">—</div></div>
+      <div class="card"><h3>Son 30g Yeni</h3><div class="kpi" id="kpi-new30">—</div></div>
+      <div class="card"><h3>Son 7g Aktif</h3><div class="kpi" id="kpi-active7">—</div></div>
+      <div class="card"><h3>Plan Dağılımı</h3><div class="kpi" id="kpi-plan">—</div></div>
+    </section>
+
+    <section class="card" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0 0 6px 0">Kullanıcılar</h3>
+        <div class="row">
+          <input placeholder="Ara (email/kullanıcı adı)" id="q" />
+          <select id="plan">
+            <option value="">Plan (hepsi)</option>
+            <option>free</option><option>basic</option><option>premium</option><option>enterprise</option>
+          </select>
+          <select id="status">
+            <option value="">Durum (hepsi)</option>
+            <option>active</option><option>blocked</option><option>pending</option>
+          </select>
+          <select id="sort">
+            <option value="created_at:desc">En Yeni</option>
+            <option value="created_at:asc">En Eski</option>
+            <option value="last_login_at:desc">Son Giriş</option>
+          </select>
+          <button id="search">Filtrele</button>
+          <button id="export">CSV</button>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>ID</th><th>E-posta</th><th>Plan</th><th>Durum</th><th>Oluşturma</th><th>Son Giriş</th><th class="right">Aksiyon</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="right" style="padding-top:10px">
+        <button id="prev">Önceki</button>
+        <span id="pagi" class="muted"></span>
+        <button id="next">Sonraki</button>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const S = {
+      page: 1, page_size: 25,
+      q: '', plan: '', status: '', sort: 'created_at:desc',
+      csrf: null,
+    };
+    const $ = (s)=>document.querySelector(s);
+    const fmt = (d)=> d ? new Date(d).toLocaleString() : '—';
+
+    async function getCSRF(){
+      try{
+        const r = await fetch('/api/csrf');
+        const j = await r.json();
+        S.csrf = j.csrf_token || r.headers.get('X-CSRF-Token');
+      }catch(e){}
+    }
+
+    async function api(path, opts={}){
+      opts.headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
+      if (S.csrf) opts.headers['X-CSRF-Token'] = S.csrf;
+      const r = await fetch(path, opts);
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+
+    async function loadHealth(){
+      try{ await api('/api/admin/health'); $('#api-status').textContent='API: OK'; }
+      catch(e){ $('#api-status').textContent='API: HATA'; }
+    }
+    async function loadMetrics(){
+      const m = await api('/api/admin/metrics');
+      $('#kpi-total').textContent = m.total_users;
+      $('#kpi-new30').textContent = m.new_30d;
+      $('#kpi-active7').textContent = m.active_7d;
+      $('#kpi-plan').textContent = Object.entries(m.by_plan||{}).map(([k,v])=>`${k}:${v}`).join(' · ') || '—';
+    }
+    function toQuery(){
+      const p = new URLSearchParams({
+        q:S.q, plan:S.plan, status:S.status, sort:S.sort, page:S.page, page_size:S.page_size
+      });
+      return '/api/admin/users?'+p.toString();
+    }
+    function row(u){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${u.id ?? ''}</td>
+        <td>${u.email ?? u.username ?? ''}</td>
+        <td><span class="badge">${u.plan ?? '—'}</span></td>
+        <td><span class="badge">${u.status ?? '—'}</span></td>
+        <td>${fmt(u.created_at)}</td>
+        <td>${fmt(u.last_login_at)}</td>
+        <td class="right">
+          <select data-id="${u.id}" class="planSel">
+            <option ${u.plan==='free'?'selected':''}>free</option>
+            <option ${u.plan==='basic'?'selected':''}>basic</option>
+            <option ${u.plan==='premium'?'selected':''}>premium</option>
+            <option ${u.plan==='enterprise'?'selected':''}>enterprise</option>
+          </select>
+          <button class="brand planBtn" data-id="${u.id}">Planı Güncelle</button>
+        </td>`;
+      return tr;
+    }
+    async function loadUsers(){
+      const j = await api(toQuery());
+      $('#rows').innerHTML = '';
+      (j.items||[]).forEach(it=> $('#rows').appendChild(row(it)));
+      $('#pagi').textContent = `Sayfa ${j.page} • Toplam ${j.total}`;
+    }
+    function bind(){
+      $('#search').onclick = ()=> {
+        S.q=$('#q').value.trim(); S.plan=$('#plan').value; S.status=$('#status').value; S.sort=$('#sort').value; S.page=1;
+        loadUsers();
+      };
+      $('#prev').onclick = ()=> { if (S.page>1){ S.page--; loadUsers(); } };
+      $('#next').onclick = ()=> { S.page++; loadUsers(); };
+      $('#refresh').onclick = ()=> { boot(); };
+      document.body.addEventListener('click', async (e)=>{
+        if (e.target.classList.contains('planBtn')){
+          const id = e.target.getAttribute('data-id');
+          const sel = document.querySelector(`select.planSel[data-id="${id}"]`);
+          await api(`/api/admin/users/${id}/plan`, {method:'POST', body: JSON.stringify({plan: sel.value})});
+          await loadUsers();
+        }
+      });
+      $('#export').onclick = async ()=>{
+        const j = await api(toQuery());
+        const rows = [['id','email','username','name','plan','status','created_at','last_login_at']]
+          .concat((j.items||[]).map(u=>[
+            u.id,u.email||'',u.username||'',u.name||'',u.plan||'',u.status||'',fmt(u.created_at),fmt(u.last_login_at)
+          ]));
+        const csv = rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('
+');
+        const blob = new Blob([csv],{type:'text/csv'});
+        const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='users.csv'; a.click();
+      };
+    }
+    async function boot(){
+      await getCSRF(); await loadHealth(); await loadMetrics(); await loadUsers();
+    }
+    bind(); boot();
+  </script>
+</body>
 </html>

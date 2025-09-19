@@ -2,216 +2,92 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OrcaQuant Admin</title>
-  <meta name="description" content="OrcaQuant Yönetim Paneli" />
-  <!-- CSRF token'ı backend tarafından burada doldurulabilir -->
-  <meta name="csrf-token" content="">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/admin.css">
-  <!-- Güvenlik notu: Üretimde CSP başlıklarını sunucu tarafında ekleyin -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OrcaQuant — Admin Panel</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="stylesheet" href="/assets/admin.css?v=1" />
+  <style>
+    :root { --bg:#0a0b0f; --card:#12141a; --muted:#8a90a2; --pri:#22ab94; --err:#f7525f; }
+    * { box-sizing:border-box }
+    body{ margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; background:var(--bg); color:#e8ecf1; }
+    header{ display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:12px 16px; background:rgba(255,255,255,0.02); border-bottom:1px solid rgba(255,255,255,0.06); position:sticky; top:0; backdrop-filter:saturate(140%) blur(8px) }
+    header h1{ font-size:16px; margin:0; letter-spacing:.2px }
+    .wrap{ max-width:1200px; margin:16px auto; padding:0 12px }
+    .toolbar{ display:grid; grid-template-columns:1fr 1fr auto auto; gap:8px; margin-bottom:12px }
+    .card{ background:var(--card); border:1px solid rgba(255,255,255,0.07); border-radius:12px; padding:12px }
+    .field{ display:flex; gap:8px }
+    .field input,.field select{ width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.10); background:#0e1118; color:#e8ecf1 }
+    button{ padding:10px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); background:#0e1118; color:#e8ecf1; cursor:pointer }
+    button.pri{ background:var(--pri); border-color:transparent; color:#07241e; font-weight:600 }
+    button[disabled]{ opacity:.6; cursor:not-allowed }
+    table{ width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; }
+    thead th{ text-align:left; font-size:12px; color:var(--muted); background:#0f131a; padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.07) }
+    tbody td{ padding:12px; border-bottom:1px solid rgba(255,255,255,0.07) }
+    tr:hover td{ background:rgba(255,255,255,0.02) }
+    .muted{ color:var(--muted) }
+    .right{ text-align:right }
+    .pagination{ display:flex; justify-content:flex-end; gap:6px; margin-top:10px }
+    .toast{ position:fixed; right:16px; bottom:16px; background:#10151c; border:1px solid rgba(255,255,255,.1); padding:12px 14px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.35); max-width:320px }
+    .toast.err{ border-color: rgba(247,82,95,.5); }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0 }
+    .skeleton{ position:relative; overflow:hidden; background:#0d1017 }
+    .skeleton::after{ content:""; position:absolute; inset:0; background:linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); transform:translateX(-100%); animation:shimmer 1.6s infinite }
+    @keyframes shimmer{ 100%{ transform:translateX(100%)} }
+    @media (max-width:720px){ .toolbar{ grid-template-columns:1fr; } }
+  </style>
 </head>
-<body data-theme="dark">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="#">OrcaQuant Admin</a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navMain">
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-          <li class="nav-item"><a class="nav-link" data-route="#dashboard" href="#dashboard">Genel Bakış</a></li>
-          <li class="nav-item"><a class="nav-link" data-route="#users" href="#users">Kullanıcılar</a></li>
-          <li class="nav-item"><a class="nav-link" data-route="#plans" href="#plans">Planlar</a></li>
-          <li class="nav-item"><a class="nav-link" data-route="#limits" href="#limits">Limitler</a></li>
-          <li class="nav-item"><a class="nav-link" data-route="#features" href="#features">Özel Özellikler</a></li>
-          <li class="nav-item"><a class="nav-link" data-route="#logs" href="#logs">Loglar</a></li>
-        </ul>
-        <div class="d-flex gap-2">
-          <button class="btn btn-outline-light btn-sm" id="btnToggleTheme" aria-label="Tema Değiştir">&#127761;</button>
-          <button class="btn btn-primary btn-sm" id="btnRefresh">Yenile</button>
+<body>
+  <header>
+    <h1>OrcaQuant — Admin</h1>
+    <div class="muted" aria-live="polite" id="status">Hazır</div>
+  </header>
+  <main class="wrap" id="app" aria-busy="false">
+    <section class="card">
+      <h2 class="sr-only">Filtreler</h2>
+      <div class="toolbar" role="region" aria-label="Filtreler ve işlemler">
+        <div class="field">
+          <input id="search" type="search" placeholder="E-posta/isim ara…" autocomplete="off" />
         </div>
-      </div>
-    </div>
-  </nav>
-
-  <main class="container-fluid py-3">
-    <!-- Alert/Toast alanı -->
-    <div id="toast" class="toast-container position-fixed top-0 end-0 p-3"></div>
-
-    <!-- Yükleniyor -->
-    <div id="loading" class="d-none text-center my-5">
-      <div class="spinner-border text-info" role="status" aria-label="Yükleniyor"></div>
-      <p class="mt-3">Veriler yükleniyor...</p>
-    </div>
-
-    <!-- Rotalar -->
-    <section id="route-dashboard" class="route d-none">
-      <div class="row g-3">
-        <div class="col-12 col-md-3">
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h6 class="text-muted">Toplam Kullanıcı</h6>
-              <h3 id="statUsers" class="fw-bold">&mdash;</h3>
-              <small id="statUsersDelta" class="text-success"></small>
-            </div>
-          </div>
-        </div>
-        <div class="col-12 col-md-3">
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h6 class="text-muted">Aktif Planlar</h6>
-              <h3 id="statPlans" class="fw-bold">&mdash;</h3>
-              <small id="statPlansDelta" class="text-success"></small>
-            </div>
-          </div>
-        </div>
-        <div class="col-12 col-md-3">
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h6 class="text-muted">API Kullanımı</h6>
-              <h3 id="statApi" class="fw-bold">&mdash;</h3>
-              <small class="text-muted">Son 24s</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-12 col-md-3">
-          <div class="card shadow-sm h-100">
-            <div class="card-body">
-              <h6 class="text-muted">Hata Oranı</h6>
-              <h3 id="statErr" class="fw-bold">&mdash;</h3>
-              <small class="text-muted">Son 24s</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card shadow-sm mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span class="fw-semibold">Sistem Sağlığı</span>
-          <button class="btn btn-outline-secondary btn-sm" id="btnHealthCheck">Health Check</button>
-        </div>
-        <div class="card-body">
-          <div id="healthList" class="row g-3"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="route-users" class="route d-none">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex gap-2 align-items-center flex-wrap">
-          <span class="fw-semibold">Kullanıcılar</span>
-          <input id="userSearch" class="form-control form-control-sm ms-auto" placeholder="Ara (email, ad)" />
-          <select id="userPageSize" class="form-select form-select-sm w-auto" aria-label="Sayfa boyutu">
-            <option value="10">10</option>
-            <option value="20" selected>20</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
+        <div class="field">
+          <select id="plan">
+            <option value="">Tüm Planlar</option>
+            <option value="free">Free</option>
+            <option value="basic">Basic</option>
+            <option value="premium">Premium</option>
+            <option value="enterprise">Enterprise</option>
           </select>
-          <div class="vr d-none d-md-block"></div>
-          <button id="btnExportUsers" class="btn btn-outline-secondary btn-sm">CSV</button>
-          <button id="btnBulkBan" class="btn btn-outline-danger btn-sm d-none">Toplu Ban</button>
-          <button id="btnBulkUnban" class="btn btn-outline-success btn-sm d-none">Toplu Unban</button>
         </div>
-        <div class="table-responsive">
-          <table class="table table-dark table-striped align-middle mb-0">
-            <thead>
-              <tr>
-                <th style="width:36px;"><input id="usersSelectAll" type="checkbox" aria-label="Tümünü seç" /></th>
-                <th data-sort="id" class="th-sort">ID</th>
-                <th data-sort="name" class="th-sort">Ad</th>
-                <th data-sort="email" class="th-sort">Email</th>
-                <th data-sort="plan" class="th-sort">Plan</th>
-                <th data-sort="status" class="th-sort">Durum</th>
-                <th class="text-end">İşlemler</th>
-              </tr>
-            </thead>
-            <tbody id="usersTbody"></tbody>
-          </table>
-        </div>
-        <div id="usersPager" class="d-flex justify-content-end gap-2 p-2"></div>
+        <button id="refresh" aria-label="Yenile">Yenile</button>
+        <button id="exportCsv" class="pri" aria-label="CSV dışa aktar">CSV Dışa Aktar</button>
       </div>
-    </section>
 
-    <section id="route-plans" class="route d-none">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between">
-          <span class="fw-semibold">Planlar</span>
-          <button id="btnNewPlan" class="btn btn-primary btn-sm">Yeni Plan</button>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-dark table-striped align-middle mb-0">
-            <thead><tr>
-              <th>Ad</th><th>Aylık Ücret</th><th>Limitler</th><th>Aktif</th><th class="text-end">İşlemler</th>
-            </tr></thead>
-            <tbody id="plansTbody"></tbody>
-          </table>
-        </div>
+      <div class="table-wrap" role="region" aria-label="Kullanıcılar">
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>Oluşturulma</th>
+              <th class="right">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody">
+            <tr><td colspan="5" class="skeleton" style="height:48px"></td></tr>
+            <tr><td colspan="5" class="skeleton" style="height:48px"></td></tr>
+            <tr><td colspan="5" class="skeleton" style="height:48px"></td></tr>
+          </tbody>
+        </table>
       </div>
-    </section>
 
-    <section id="route-limits" class="route d-none">
-      <div class="card shadow-sm">
-        <div class="card-header"><span class="fw-semibold">Kullanım Limitleri</span></div>
-        <div class="card-body" id="limitsBody">
-          <!-- Dinamik progress barlar -->
-        </div>
-      </div>
-    </section>
-
-    <section id="route-features" class="route d-none">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex gap-2 align-items-center">
-          <span class="fw-semibold">Özel Özellikler (JSON)</span>
-          <div class="ms-auto d-flex gap-2">
-            <button id="btnImportFeatures" class="btn btn-outline-secondary btn-sm">JSON İçe Aktar</button>
-            <button id="btnExportFeatures" class="btn btn-outline-secondary btn-sm">JSON Dışa Aktar</button>
-            <button id="btnSaveFeatures" class="btn btn-primary btn-sm">Kaydet</button>
-          </div>
-        </div>
-        <div class="card-body">
-          <textarea id="featuresJson" class="form-control font-monospace" rows="12" spellcheck="false" aria-label="Özel Özellikler JSON"></textarea>
-          <div id="featuresError" class="text-danger small mt-2 d-none"></div>
-        </div>
-      </div>
-    </section>
-
-    <section id="route-logs" class="route d-none">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex align-items-center gap-2 flex-wrap">
-          <span class="fw-semibold">Uygulama Logları</span>
-          <select id="logLevel" class="form-select form-select-sm w-auto ms-auto" aria-label="Log Seviyesi">
-            <option value="">Tümü</option>
-            <option>INFO</option>
-            <option>WARNING</option>
-            <option>ERROR</option>
-          </select>
-          <select id="logPageSize" class="form-select form-select-sm w-auto" aria-label="Sayfa boyutu">
-            <option value="20">20</option>
-            <option value="50" selected>50</option>
-            <option value="100">100</option>
-          </select>
-          <button id="btnExportLogs" class="btn btn-outline-secondary btn-sm">CSV</button>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-dark table-striped align-middle mb-0">
-            <thead>
-              <tr>
-                <th data-sort="ts" class="th-sort">Zaman</th>
-                <th data-sort="level" class="th-sort">Seviye</th>
-                <th data-sort="source" class="th-sort">Kaynak</th>
-                <th>Mesaj</th>
-              </tr>
-            </thead>
-            <tbody id="logsTbody"></tbody>
-          </table>
-        </div>
-        <div id="logsPager" class="d-flex justify-content-end gap-2 p-2"></div>
-      </div>
+      <nav class="pagination" aria-label="Sayfalandırma">
+        <button id="prev" aria-label="Önceki sayfa">&larr; Önceki</button>
+        <div id="pageState" class="muted" aria-live="polite">Sayfa 1</div>
+        <button id="next" aria-label="Sonraki sayfa">Sonraki &rarr;</button>
+      </nav>
     </section>
   </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script type="module" src="assets/admin.js"></script>
+  <div id="toast" class="toast" hidden></div>
+  <script src="/assets/admin.js?v=1" defer></script>
 </body>
 </html>

@@ -29,3 +29,7 @@ prometheus-client>=0.16,<1.0
 # Realtime (kullanıyorsan bırak; kullanmıyorsan ikisini kaldır)
 Flask-SocketIO>=5.3,<6.0
 eventlet>=0.33,<0.34
+
+# Admin SPA dependencies
+itsdangerous==2.2.0      # CSRF token üretimi (admin)
+marshmallow==3.21.1      # Şema/validasyon (opsiyonel)
