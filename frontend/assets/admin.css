@@ -1,39 +1,6 @@
-:root{
-  --bg:#f7f9fc;
-  --card:#ffffff;
-  --border:#d7dce7;
-  --text:#0b1220;
-}
-
-[data-theme="dark"]{
-  --bg:#0b0d10;
-  --card:#11141a;
-  --border:#232833;
-  --text:#e8eef8;
-}
-
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0b0d10;
-    --card:#11141a;
-    --border:#232833;
-    --text:#e8eef8;
-  }
-}
-
-body{background:var(--bg);color:var(--text);}
-.card{background:var(--card);border-color:var(--border);}
-.route.d-none{display:none!important;}
-textarea.font-monospace{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;}
-.progress-sm{height:.6rem;}
-
-/* Küçük UX dokunuşları */
-.navbar-brand{letter-spacing:.2px}
-.table td,.table th{vertical-align:middle}
-.th-sort{cursor:pointer;user-select:none}
-.th-sort::after{content:" ⇅";opacity:.5;font-size:.8em}
-.th-sort.active.asc::after{content:" ↑";opacity:.9}
-.th-sort.active.desc::after{content:" ↓";opacity:.9}
-
-.skeleton{position:relative;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.12),rgba(255,255,255,.06));background-size:200% 100%;animation:shimmer 1.2s infinite;border-radius:4px;min-height:12px}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+:focus-visible{ outline:2px solid #22ab94; outline-offset:2px }
+.tag{ display:inline-flex; align-items:center; gap:6px; padding:4px 8px; border-radius:8px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); font-size:12px }
+.tag.free{ background:rgba(34,171,148,.08); border-color:rgba(34,171,148,.3) }
+.tag.basic{ background:rgba(255,255,255,.06) }
+.tag.premium{ background:rgba(255,215,0,.06); border-color:rgba(255,215,0,.3) }
+.tag.enterprise{ background:rgba(0,136,255,.08); border-color:rgba(0,136,255,.3) }

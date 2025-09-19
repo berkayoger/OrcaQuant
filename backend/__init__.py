@@ -694,7 +694,11 @@ def register_blueprints(app: Flask):
         from .blueprints import admin_api, csrf_api
 
         app.register_blueprint(csrf_api.bp)
-        app.register_blueprint(admin_api.bp)
+
+        admin_bp = getattr(admin_api, "admin_bp", getattr(admin_api, "bp", None))
+        if admin_bp is not None:
+            url_prefix = None if getattr(admin_bp, "url_prefix", None) else "/api/admin"
+            app.register_blueprint(admin_bp, url_prefix=url_prefix)
     except Exception as exc:
         logger.warning(f"Lightweight admin blueprints not registered: {exc}")
 

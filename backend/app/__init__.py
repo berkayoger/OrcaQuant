@@ -221,6 +221,23 @@ def create_app(config_object: str | None = None) -> Flask:
     except Exception:
         pass
 
+    # Lightweight admin dashboard & CSRF helpers
+    try:
+        from backend.blueprints import admin_api as dashboard_bp
+        from backend.blueprints import csrf_api as csrf_bp
+
+        if "csrf_api" not in app.blueprints:
+            app.register_blueprint(csrf_bp.bp)
+        if "admin_api" not in app.blueprints:
+            admin_bp = getattr(dashboard_bp, "admin_bp", getattr(dashboard_bp, "bp", None))
+            if admin_bp is not None:
+                url_prefix = None if getattr(admin_bp, "url_prefix", None) else "/api/admin"
+                app.register_blueprint(admin_bp, url_prefix=url_prefix)
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "dashboard blueprints not registered: %s", exc
+        )
+
     # ML Blueprint (opsiyonel)
     try:
         from backend.ml.routes import ml_bp
