@@ -1,9 +1,260 @@
 'use strict'
 
 const API_ROOT = '/api/admin/dashboard'
+const SSE_ENDPOINT = `${API_ROOT}/stream`
+const TOKEN_CANDIDATES = ['jwt', 'auth_token', 'access_token', 'admin_token', 'oq_jwt', 'token']
+const TOKEN_CANDIDATE_SET = new Set(TOKEN_CANDIDATES.map(k => k.toLowerCase()))
+const SSE_RETRY_BASE = 1000
+const SSE_RETRY_MAX = 30000
+
+let sseSource = null
+let sseReconnectTimer = null
+let sseRetryDelay = SSE_RETRY_BASE
+let sseShouldReconnect = true
+let sseInitialized = false
+let sseCurrentMeta = {url: null, token: null}
+let sseConnectAttempts = 0
+let sseScheduledDelay = null
+
+function readTokenFromStorage(storage){
+  if (!storage) return null
+  try {
+    for (const key of TOKEN_CANDIDATES) {
+      const value = storage.getItem(key)
+      if (value) return value
+    }
+  } catch (_) {
+    return null
+  }
+  return null
+}
+
+function readTokenFromCookies(){
+  if (typeof document === 'undefined' || !document.cookie) return null
+  const parts = document.cookie.split(';')
+  for (const part of parts) {
+    const [rawKey, ...rest] = part.split('=')
+    if (!rawKey) continue
+    const key = rawKey.trim()
+    if (!key) continue
+    if (!TOKEN_CANDIDATE_SET.has(key.toLowerCase())) continue
+    const value = rest.join('=')
+    if (value) return decodeURIComponent(value.trim())
+  }
+  return null
+}
+
+function getStoredToken(){
+  const storages = []
+  try { storages.push(window.localStorage) } catch (_) { /* ignore */ }
+  try { storages.push(window.sessionStorage) } catch (_) { /* ignore */ }
+  for (const storage of storages) {
+    const value = readTokenFromStorage(storage)
+    if (value) return value
+  }
+  return readTokenFromCookies()
+}
+
+function createCustomEvt(name, detail){
+  try {
+    return new CustomEvent(name, {detail})
+  } catch (_) {
+    const evt = document.createEvent('CustomEvent')
+    evt.initCustomEvent(name, false, false, detail)
+    return evt
+  }
+}
+
+function emitSseEvent(phase, extra = {}){
+  const detail = {...extra, phase}
+  const targets = [window, document]
+  for (const target of targets) {
+    try {
+      target.dispatchEvent(createCustomEvt('oq:sse', detail))
+      target.dispatchEvent(createCustomEvt(`oq:sse:${phase}`, detail))
+    } catch (_) {
+      /* ignore dispatch failures */
+    }
+  }
+}
+
+function parseSseData(raw){
+  if (raw == null) return raw
+  if (typeof raw !== 'string') return raw
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  try {
+    return JSON.parse(trimmed)
+  } catch (_) {
+    return raw
+  }
+}
+
+function buildSseMeta(){
+  const token = getStoredToken()
+  try {
+    const url = new URL(SSE_ENDPOINT, window.location.origin)
+    if (token) url.searchParams.set('token', token)
+    return {url: url.toString(), token: token || null}
+  } catch (_) {
+    if (token) {
+      const sep = SSE_ENDPOINT.includes('?') ? '&' : '?'
+      return {url: `${SSE_ENDPOINT}${sep}token=${encodeURIComponent(token)}`, token}
+    }
+    return {url: SSE_ENDPOINT, token: null}
+  }
+}
+
+function closeSseSource(){
+  if (!sseSource) return
+  try { sseSource.close() } catch (_) { /* ignore */ }
+  sseSource = null
+}
+
+function resetSseTimers(){
+  if (sseReconnectTimer) {
+    clearTimeout(sseReconnectTimer)
+    sseReconnectTimer = null
+  }
+  sseScheduledDelay = null
+}
+
+function scheduleSseReconnect(reason, context = {}){
+  if (!sseShouldReconnect || sseReconnectTimer) return
+  const delay = Math.min(sseRetryDelay, SSE_RETRY_MAX)
+  const detail = {...sseCurrentMeta, reason, delay, ...context}
+  emitSseEvent('reconnecting', detail)
+  sseScheduledDelay = delay
+  sseReconnectTimer = setTimeout(() => {
+    sseReconnectTimer = null
+    connectSse()
+  }, delay)
+  sseRetryDelay = Math.min(sseRetryDelay * 2, SSE_RETRY_MAX)
+}
+
+function connectSse(){
+  if (!sseShouldReconnect) return null
+  if (typeof window === 'undefined' || !window.EventSource) {
+    emitSseEvent('unsupported', {reason: 'no-eventsource'})
+    return null
+  }
+
+  resetSseTimers()
+  closeSseSource()
+
+  const meta = buildSseMeta()
+  sseCurrentMeta = {...meta}
+  sseConnectAttempts += 1
+  const connectionMeta = {...sseCurrentMeta, attempt: sseConnectAttempts}
+  emitSseEvent('connecting', connectionMeta)
+
+  try {
+    sseSource = new EventSource(meta.url, {withCredentials: true})
+  } catch (error) {
+    emitSseEvent('error', {...connectionMeta, error})
+    scheduleSseReconnect('constructor-error', {error})
+    return null
+  }
+
+  sseSource.onopen = () => {
+    sseRetryDelay = SSE_RETRY_BASE
+    emitSseEvent('open', {...connectionMeta, source: sseSource})
+  }
+
+  sseSource.onmessage = (event) => {
+    const data = parseSseData(event.data)
+    const detail = {
+      ...connectionMeta,
+      source: sseSource,
+      data,
+      raw: event.data,
+      lastEventId: event.lastEventId || null,
+      event: event.type || 'message'
+    }
+    emitSseEvent('message', detail)
+  }
+
+  sseSource.onerror = (event) => {
+    const detail = {
+      ...connectionMeta,
+      source: sseSource,
+      error: event,
+      readyState: sseSource?.readyState
+    }
+    emitSseEvent('error', detail)
+    closeSseSource()
+    scheduleSseReconnect('error', detail)
+  }
+
+  return sseSource
+}
+
+function restartSse(reason = 'manual-restart'){
+  if (typeof window === 'undefined' || !window.EventSource) return
+  sseShouldReconnect = true
+  sseRetryDelay = SSE_RETRY_BASE
+  resetSseTimers()
+  emitSseEvent('reconnecting', {...sseCurrentMeta, reason, delay: 0})
+  connectSse()
+}
+
+function stopSse(reason = 'manual-stop'){
+  sseShouldReconnect = false
+  resetSseTimers()
+  closeSseSource()
+  emitSseEvent('close', {...sseCurrentMeta, reason})
+}
+
+function handleTokenStorageChange(event){
+  if (!event || !event.key) return
+  const key = String(event.key).toLowerCase()
+  if (!TOKEN_CANDIDATE_SET.has(key)) return
+  const token = getStoredToken()
+  if (token === sseCurrentMeta.token) return
+  restartSse('token-changed')
+}
+
+if (typeof window !== 'undefined' && !window.__oqAdminSSE) {
+  window.__oqAdminSSE = {
+    reconnect: (reason) => restartSse(reason || 'manual-reconnect'),
+    disconnect: (reason) => stopSse(reason || 'manual-stop'),
+    connect: () => {
+      sseShouldReconnect = true
+      sseRetryDelay = SSE_RETRY_BASE
+      return connectSse()
+    },
+    getToken: () => getStoredToken(),
+    get source(){ return sseSource },
+    get state(){
+      return {
+        connected: !!sseSource,
+        retryDelay: sseScheduledDelay ?? sseRetryDelay,
+        meta: {...sseCurrentMeta}
+      }
+    },
+    get initialized(){ return sseInitialized }
+  }
+}
+
+function initDashboardSse(){
+  if (sseInitialized) return
+  sseInitialized = true
+
+  if (typeof window === 'undefined' || !window.EventSource) {
+    emitSseEvent('unsupported', {reason: 'no-eventsource'})
+    return
+  }
+
+  sseShouldReconnect = true
+  sseRetryDelay = SSE_RETRY_BASE
+  connectSse()
+
+  window.addEventListener('storage', handleTokenStorageChange)
+  window.addEventListener('beforeunload', () => stopSse('page-unload'))
+}
 
 async function api(path, opts = {}) {
-  const token = localStorage.getItem('jwt')
+  const token = getStoredToken()
   const headers = new Headers({'Accept': 'application/json'})
   if (opts.body && !(opts.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json')
@@ -226,4 +477,5 @@ function bindUI(){
 document.addEventListener('DOMContentLoaded', () => {
   bindUI()
   fetchUsers()
+  initDashboardSse()
 })
