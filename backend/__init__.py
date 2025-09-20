@@ -20,6 +20,7 @@ from .config import get_config
 from .utils.logging_setup import setup_logging, setup_json_logging, with_request_id
 from .utils.error_handlers import register_error_handlers as register_enhanced_error_handlers
 from .utils.cache import init_l1_cache_from_config
+from .utils.audit import bind_auto_audit
 from .realtime import init_realtime
 from .db import db as db
 
@@ -360,6 +361,13 @@ def create_app(config_name: str = None) -> Flask:
 
     # Register blueprints
     register_blueprints(app)
+
+    # Bind automatic admin auditing after blueprint registration so the hooks
+    # observe all admin endpoints.
+    try:
+        bind_auto_audit(app)
+    except Exception:
+        logger.debug("Auto audit hook could not be registered", exc_info=True)
 
     # Create and register versioned API
     api_bp_v1, api = _create_v1_api(app)
