@@ -12,6 +12,7 @@ Bu projede güvenlik ve abonelik için gerekli başlıca anahtarlar:
 ## Ağ & Başlıklar
 - `SECURE_HEADERS_ENABLED`, `HSTS_MAX_AGE`, `CSP_POLICY`
 - `SECURITY_CORS_ALLOWED_ORIGINS`, `SECURITY_CORS_ALLOW_CREDENTIALS`
+- `CORS_ORIGINS` (API katmanı için virgülle ayrık origin listesi)
 - `RATE_LIMIT_DEFAULT`, `LOGIN_RATE_LIMIT`, `LOGIN_MAX_ATTEMPTS`, `LOGIN_LOCKOUT_DURATION_MINUTES`
 - `WSGI_APP=app.secure_app:app`
 
@@ -21,5 +22,10 @@ Bu projede güvenlik ve abonelik için gerekli başlıca anahtarlar:
 - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_BILLING_PORTAL_RETURN_URL`
 - Craftgate: `CRAFTGATE_API_KEY`, `CRAFTGATE_SECRET_KEY`, `CRAFTGATE_MERCHANT_ID`, `CRAFTGATE_WEBHOOK_SECRET`
 - `SEED_PLANS` örn. `BASIC:999:TRY:month,PRO:2999:TRY:month`
+
+## Audit & Loglama
+- `ENABLE_AUDIT_LOGGING`
+- `AUDIT_FALLBACK_LOG_DIR`
+- `AUDIT_FALLBACK_FILE_SIZE_LIMIT_MB`
 
 > `.env.example` dosyanız farklı ise `scripts/ensure_env_keys.py --apply` komutu eksikleri **sona ekler**, mevcut değerleri **asla değiştirmez**.
