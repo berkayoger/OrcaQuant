@@ -111,9 +111,11 @@ Sık kullanılan anahtarlar:
 | `REDIS_URL`               | Redis bağlantısı                              |
 | `SECRET_KEY`              | Flask gizli anahtarı                          |
 | `JWT_SECRET_KEY`          | JWT için gizli anahtar                        |
-| `CORS_ALLOWLIST`          | Virgülle ayrık origins                        |
-| `RATE_LIMIT`              | Varsayılan hız limiti (örn. `200/minute`)     |
-| `SECURE_SSL_REDIRECT`     | Prod’da HTTPS zorunluluğu (true/false)       |
+| `CORS_ORIGINS`            | API için virgülle ayrılmış CORS origin listesi |
+| `ENABLE_AUDIT_LOGGING`    | Güvenlik/audit servislerini etkinleştirir     |
+| `AUDIT_FALLBACK_LOG_DIR`  | DB yazamazsa audit loglarının yazılacağı klasör |
+| `AUDIT_FALLBACK_FILE_SIZE_LIMIT_MB` | Fallback audit log dosyası için MB sınırı |
+| `RATE_LIMITS`             | Varsayılan hız limitleri (örn. `200 per minute;5 per second`) |
 
 > **İpucu:** `scripts/ensure_env_keys.py --apply` ile eksik anahtarları güvenli şekilde ekleyebilirsiniz (idempotent yaklaşım).
 
