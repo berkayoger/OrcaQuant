@@ -1,0 +1,14 @@
+/var/log/orcaquant/*.log {
+  daily
+  rotate 52
+  missingok
+  compress
+  delaycompress
+  notifempty
+  create 0644 www-data www-data
+  postrotate
+    systemctl restart orcaquant.service >/dev/null 2>&1 || true
+    systemctl restart orcaquant-celery.service >/dev/null 2>&1 || true
+    systemctl restart orcaquant-beat.service  >/dev/null 2>&1 || true
+  endscript
+}

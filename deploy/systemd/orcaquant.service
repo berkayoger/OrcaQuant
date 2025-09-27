@@ -1,0 +1,15 @@
+[Unit]
+Description=OrcaQuant Gunicorn App
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/orcaquant
+EnvironmentFile=/opt/orcaquant/.env
+ExecStart=/usr/bin/env bash -lc 'exec gunicorn -c /opt/orcaquant/gunicorn.conf.py "backend:create_app()"'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

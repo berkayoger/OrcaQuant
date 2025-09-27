@@ -1,21 +1,27 @@
-# Güvenlik odaklı basit gunicorn konfigürasyonu
+"""Production-focused Gunicorn configuration."""
+
 import multiprocessing
+import os
 
-bind = "0.0.0.0:8000"
-workers = max(2, multiprocessing.cpu_count())
-threads = 2
-timeout = 120
+# Bind to localhost; Nginx terminates TLS and proxies requests internally.
+bind = "127.0.0.1:5000"
+
+# Formula recommended by the Gunicorn docs. Allow overrides via env vars.
+workers = int(os.getenv("GUNICORN_WORKERS", (multiprocessing.cpu_count() * 2) + 1))
+threads = int(os.getenv("GUNICORN_THREADS", 2))
+worker_class = os.getenv("GUNICORN_WORKER_CLASS", "gthread")
+
+timeout = int(os.getenv("GUNICORN_TIMEOUT", 60))
 graceful_timeout = 30
+keepalive = 5
 
-# İstek satırı ve header alanı sınırları (çok büyük header/line ile gelen saldırılara karşı)
+# Header/line limits mitigate abuse from extremely large requests.
 limit_request_line = 4094
 limit_request_fields = 100
 limit_request_field_size = 8190
 
-# TMP alanı (çok büyük body'leri disk yerine RAM'e yazma riskini azalt)
 worker_tmp_dir = "/tmp"
 
-# Loglar
 accesslog = "-"
 errorlog = "-"
-loglevel = "info"
+loglevel = os.getenv("GUNICORN_LOGLEVEL", "info")

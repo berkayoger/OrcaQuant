@@ -1,0 +1,17 @@
+[Unit]
+Description=OrcaQuant Celery Worker
+After=network.target redis.service
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/orcaquant
+EnvironmentFile=/opt/orcaquant/.env
+ExecStart=/usr/bin/env bash -lc 'exec celery -A backend.tasks.celery_tasks worker \
+  --loglevel=INFO --concurrency=4 \
+  --max-tasks-per-child=200 --max-memory-per-child=300000'
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
