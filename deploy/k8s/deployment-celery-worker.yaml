@@ -19,7 +19,7 @@ spec:
         - name: worker
           image: your-registry/ytd-backend:latest
           imagePullPolicy: IfNotPresent
-          command: ["bash","-lc","celery -A backend.celery_app worker --loglevel=INFO --concurrency=4 --max-tasks-per-child=500 --prefetch-multiplier=1"]
+          command: ["bash","-lc","celery -A backend.celery_app worker --loglevel=INFO --concurrency=4 --max-tasks-per-child=200 --max-memory-per-child=300000 --prefetch-multiplier=1"]
           envFrom:
             - configMapRef:
                 name: backend-env

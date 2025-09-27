@@ -10,6 +10,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from backend.config import get_config
 
@@ -112,6 +113,11 @@ def _init_observability(app: Flask) -> None:
 
 
 app = _create_app()
+
+# Ensure the real client IP/HTTPS scheme is preserved when running behind
+# reverse proxies such as Nginx or a load balancer.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
 _init_observability(app)
 
 if socketio:
