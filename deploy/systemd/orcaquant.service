@@ -7,7 +7,7 @@ User=www-data
 Group=www-data
 WorkingDirectory=/opt/orcaquant
 EnvironmentFile=/opt/orcaquant/.env
-ExecStart=/usr/bin/env bash -lc 'exec gunicorn -c /opt/orcaquant/gunicorn.conf.py "backend:create_app()"'
+ExecStart=/usr/bin/env bash -lc 'exec gunicorn -c /opt/orcaquant/gunicorn.conf.py "backend.wsgi:app"'
 Restart=always
 RestartSec=3
 
