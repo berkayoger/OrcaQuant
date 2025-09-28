@@ -3,7 +3,7 @@ set -euo pipefail
 
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/opt/backups/orcaquant"
-DB_NAME="orcaquant"
+DB_NAME="orcaquant_prod"
 
 mkdir -p "$BACKUP_DIR"
 

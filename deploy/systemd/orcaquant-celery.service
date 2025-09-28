@@ -9,7 +9,7 @@ WorkingDirectory=/opt/orcaquant
 EnvironmentFile=/opt/orcaquant/.env
 ExecStart=/usr/bin/env bash -lc 'exec celery -A backend.tasks.celery_tasks worker \
   --loglevel=INFO --concurrency=4 \
-  --max-tasks-per-child=200 --max-memory-per-child=300000'
+  --max-tasks-per-child=200 --max-memory-per-child=300000 --prefetch-multiplier=1'
 Restart=always
 RestartSec=3
 
