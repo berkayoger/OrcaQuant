@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: OrcaQuant API
+  version: "1.0.0"
+servers:
+  - url: /
+paths:
+  /healthz:
+    get:
+      summary: Health Check
+      responses:
+        "200":
+          description: OK
+  /api/health:
+    get:
+      summary: Health Check (alias)
+      responses:
+        "200":
+          description: OK
+  /api/market/price:
+    get:
+      summary: Simple price (CoinGecko)
+      parameters:
+        - in: query
+          name: symbol
+          schema:
+            type: string
+            example: bitcoin
+        - in: query
+          name: vs
+          schema:
+            type: string
+            example: usd
+      responses:
+        "200":
+          description: OK

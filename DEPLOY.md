@@ -99,6 +99,7 @@ sudo certbot renew --dry-run
 ## 7. Healthcheck, Log Rotate, Backup
 ```bash
 curl -f http://localhost/healthz
+curl -f http://localhost/api/health
 sudo cp deploy/logrotate/orcaquant /etc/logrotate.d/orcaquant
 sudo install -m 0755 deploy/scripts/backup.sh /opt/orcaquant/backup.sh
 (crontab -l 2>/dev/null; echo "0 2 * * * /opt/orcaquant/backup.sh") | crontab -
@@ -106,7 +107,7 @@ sudo install -m 0755 deploy/scripts/backup.sh /opt/orcaquant/backup.sh
 
 ## 8. CI/CD Özeti
 - Docker image'ı build & push (`.github/workflows/deploy.yml`).
-- Sunucuda image pull + `docker compose up -d` + `flask db upgrade` + `/healthz` kontrolü.
+- Sunucuda image pull + `docker compose up -d` + `flask db upgrade` + `/healthz` + `/api/health` kontrolleri.
 - Güvenlik taramaları: CodeQL, pip-audit, Trivy.
 
 ## 9. Performans & Güvenlik İpuçları
@@ -120,3 +121,10 @@ sudo install -m 0755 deploy/scripts/backup.sh /opt/orcaquant/backup.sh
 - WebSocket kopmaları → Nginx `Upgrade/Connection` başlıklarını ve `worker_class` ayarını kontrol edin.
 - DB stale connections → `pool_pre_ping=True`, `pool_recycle=1800`.
 - Redis bellek → `redis-cli INFO memory`, `maxmemory-policy allkeys-lru`.
+
+## 11. Monitoring Stack (Opsiyonel)
+```bash
+cd deploy/monitoring
+docker compose -f docker-compose.monitoring.yml up -d
+# Prometheus http://SERVER:9090, Grafana http://SERVER:3000 (admin/admin)
+```

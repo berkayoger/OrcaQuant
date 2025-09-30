@@ -13,6 +13,8 @@ from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from backend.config import get_config
+from backend.blueprints.docs import bp as docs_blueprint
+from backend.blueprints.market_api import bp as market_api_blueprint
 
 try:
     import sentry_sdk
@@ -113,6 +115,15 @@ def _init_observability(app: Flask) -> None:
 
 
 app = _create_app()
+
+for blueprint in (market_api_blueprint, docs_blueprint):
+    if blueprint.name not in app.blueprints:
+        app.register_blueprint(blueprint)
+
+
+@app.get("/api/health")
+def api_health():
+    return jsonify(status="ok", sha=app.config.get("GIT_SHA", "dev"))
 
 # Ensure the real client IP/HTTPS scheme is preserved when running behind
 # reverse proxies such as Nginx or a load balancer.
