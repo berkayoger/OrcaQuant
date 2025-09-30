@@ -33,6 +33,7 @@ jobs:
           docker compose -f /opt/orcaquant/docker-compose.staging.yml up -d
           docker compose -f /opt/orcaquant/docker-compose.staging.yml exec -T app flask db upgrade
           curl -f http://localhost/healthz
+          echo "STAGING OK"
           SSH
 
   promote_production:
@@ -49,4 +50,5 @@ jobs:
           docker compose -f /opt/orcaquant/docker-compose.yml up -d
           docker compose -f /opt/orcaquant/docker-compose.yml exec -T app flask db upgrade
           curl -f http://localhost/healthz
+          echo "PROD OK"
           SSH
