@@ -266,6 +266,45 @@ def refresh_tokens():
     return response, 200
 
 
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout_user():
+    """Invalidate all active refresh sessions for the authenticated user."""
+
+    try:
+        user_id_raw = get_jwt_identity()
+        user_id = int(user_id_raw) if user_id_raw is not None else None
+    except (TypeError, ValueError):
+        user_id = None
+    if not user_id:
+        return jsonify(error="Unauthorized"), 401
+
+    sessions = (
+        UserSession.query.filter_by(user_id=user_id, revoked=False).all()
+    )
+    revoked_count = 0
+    now = datetime.utcnow()
+    for session in sessions:
+        session.revoked = True
+        session.is_active = False
+        session.expires_at = now
+        session.last_used = now
+        revoked_count += 1
+
+    try:
+        db.session.commit()
+    except Exception as exc:  # pragma: no cover - defensive
+        db.session.rollback()
+        logger.error("Logout failed: %s", exc)
+        return jsonify(error="logout_failed", message="Failed to revoke sessions"), 500
+
+    response = jsonify(message="Logout successful", revoked_sessions=revoked_count)
+    secure = not current_app.debug
+    for cookie_name in ("refreshToken", "accessToken", "csrf-token"):
+        response.delete_cookie(cookie_name, path="/", secure=secure, samesite="Strict")
+    return response, 200
+
+
 @auth_bp.route("/check-username", methods=["GET"])
 @limiter.limit("30/minute")
 def check_username_availability():

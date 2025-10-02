@@ -21,6 +21,7 @@ from .utils.logging_setup import setup_logging, setup_json_logging, with_request
 from .utils.error_handlers import register_error_handlers as register_enhanced_error_handlers
 from .utils.cache import init_l1_cache_from_config
 from .utils.audit import bind_auto_audit
+from .api.swagger import init_swagger
 from .realtime import init_realtime
 from .db import db as db
 
@@ -204,11 +205,53 @@ def _convert_swagger_to_oas3(swagger_spec: dict) -> dict:
 def _register_backward_compatibility(app: Flask):
     """Register backward compatibility redirects for /api/* -> /api/v1/*"""
     from flask import redirect
-    
+
     @app.route("/api/<path:subpath>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
     def api_redirect(subpath: str):
         base_prefix = app.config.get("API_BASE_PREFIX", "/api/v1")
         return redirect(f"{base_prefix}/{subpath}", code=308)
+
+
+def _ensure_api_version_aliases(app: Flask) -> None:
+    """Expose versioned aliases (e.g. /api/v1/...) for legacy blueprints."""
+
+    base_prefix = app.config.get("API_BASE_PREFIX", "/api/v1")
+    if not base_prefix.startswith("/api/"):
+        return
+
+    existing_rules = {rule.rule for rule in app.url_map.iter_rules()}
+    base_prefix_normalized = base_prefix.rstrip("/")
+
+    for rule in list(app.url_map.iter_rules()):
+        if rule.build_only:
+            continue
+        if rule.rule.startswith(base_prefix_normalized):
+            continue
+        new_rule = None
+        if rule.rule.startswith("/api/"):
+            if rule.rule.startswith("/api/v"):
+                continue
+            new_rule = f"{base_prefix_normalized}{rule.rule[4:]}"
+        elif rule.rule.startswith("/auth/"):
+            new_rule = f"{base_prefix_normalized}/auth{rule.rule[5:]}"
+        if not new_rule or new_rule in existing_rules:
+            continue
+
+        methods = sorted((rule.methods or set()) - {"HEAD", "OPTIONS"})
+        if not methods:
+            continue
+
+        app.add_url_rule(
+            new_rule,
+            endpoint=f"{rule.endpoint}__alias_{base_prefix_normalized.strip('/').replace('/', '_')}",
+            view_func=app.view_functions[rule.endpoint],
+            defaults=rule.defaults,
+            methods=methods,
+            provide_automatic_options=False,
+            subdomain=rule.subdomain,
+            strict_slashes=rule.strict_slashes,
+        )
+        existing_rules.add(new_rule)
 
 
 def create_app(config_name: str = None) -> Flask:
@@ -361,6 +404,15 @@ def create_app(config_name: str = None) -> Flask:
 
     # Register blueprints
     register_blueprints(app)
+
+    # Ensure versioned aliases exist for legacy routes
+    _ensure_api_version_aliases(app)
+
+    # Initialise OpenAPI/Swagger documentation
+    try:
+        init_swagger(app)
+    except Exception:  # pragma: no cover - documentation should not break the app
+        logger.warning("Swagger initialisation failed", exc_info=True)
 
     # Bind automatic admin auditing after blueprint registration so the hooks
     # observe all admin endpoints.
