@@ -7,7 +7,18 @@ import logging
 import os
 from typing import Any, Callable
 
-from cachetools import TTLCache
+try:  # pragma: no cover - import shim
+    from cachetools import TTLCache  # type: ignore
+except Exception:  # pragma: no cover
+    class TTLCache(dict):
+        def __init__(self, maxsize: int, ttl: int):
+            super().__init__()
+            self.maxsize = maxsize
+            self.ttl = ttl
+
+        def __call__(self, func: Callable):
+            return func
+
 from flask import current_app
 
 # Try to import Flask-Caching for better integration

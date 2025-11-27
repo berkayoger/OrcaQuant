@@ -2,10 +2,12 @@
 
 from functools import wraps
 
+from functools import wraps
+
 from flask import current_app, g, jsonify, request
 from loguru import logger
 
-from backend.db.models import AlarmSeverityEnum, User
+from backend.db.models import AlarmSeverityEnum, User, UserRole
 from backend.utils.helpers import add_audit_log, is_user_accessible
 
 
@@ -50,11 +52,6 @@ def require_permission(permission_name: str):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Test ortamında veya API anahtarı kullanıldığında izin kontrolünü atla
-            if current_app and current_app.config.get("TESTING"):
-                return f(*args, **kwargs)
-            if request.headers.get("X-API-KEY"):
-                return f(*args, **kwargs)
             # 1) Temel kullanıcı erişilebilirlik kontrolü
             if (
                 not hasattr(g, "user")
@@ -103,6 +100,36 @@ def require_permission(permission_name: str):
                 )
 
             # 3) İzin varsa devam et
+            return f(*args, **kwargs)
+
+        return decorated_function
+
+    return decorator
+
+
+def require_roles(allowed_roles: set[UserRole] | None = None):
+    allowed_roles = allowed_roles or {UserRole.ADMIN, UserRole.SYSTEM_ADMIN}
+
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            user = getattr(g, "user", None)
+            if not isinstance(user, User):
+                return _error_response("Yetkilendirme hatası: Kullanıcı bilgisi bulunamadı.", 401)
+
+            role = getattr(user, "role", None)
+            if role not in allowed_roles:
+                logger.warning(
+                    "rbac_denied",
+                    extra={
+                        "user_id": getattr(user, "id", None),
+                        "username": getattr(user, "username", None),
+                        "role": getattr(role, "name", role),
+                        "required_roles": [r.name for r in allowed_roles],
+                    },
+                )
+                return _error_response("Erişim yetkiniz yok.", 403)
+
             return f(*args, **kwargs)
 
         return decorated_function

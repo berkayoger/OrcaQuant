@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
 import { PredictionDisplay } from '@/components/PredictionDisplay';
 import { AnalyticsSummary } from '@/components/AnalyticsSummary';
+import { PlanUsagePanel } from '@/components/PlanUsagePanel';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 import { usePredictionStore } from '@/store/predictionStore';
 
 export const DashboardPage = (): JSX.Element => {
   const predictions = usePredictionStore((state) => state.predictions);
+  const { data: limits, loading: limitsLoading } = usePlanLimits();
 
   const metrics = useMemo(() => {
     const avgConfidence = predictions.length
@@ -72,6 +75,14 @@ export const DashboardPage = (): JSX.Element => {
         <div className="mt-6">
           <PredictionDisplay />
         </div>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold text-white">Plan ve Kullanım</h2>
+          {limitsLoading && <span className="text-xs text-slate-400">Limit bilgisi yükleniyor...</span>}
+        </div>
+        {limits && <PlanUsagePanel data={limits} />}
       </section>
 
       <section className="space-y-6">

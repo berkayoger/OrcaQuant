@@ -17,6 +17,12 @@ def _resolve_user():
 
         if hasattr(g, "user") and isinstance(getattr(g, "user", None), User):
             return g.user
+        api_key = request.headers.get("X-API-KEY")
+        if api_key:
+            user = User.query.filter_by(api_key=api_key).first()
+            if user:
+                g.user = user
+                return user
     except Exception:
         pass
     try:
@@ -143,6 +149,14 @@ def check_usage_limit(feature_key: str) -> Callable:
                 user_id=str(user.id), feature_key=feature_key
             )
             quota = int(eff.get("daily_quota", 0))
+            if quota <= 0:
+                try:
+                    plan_features = getattr(getattr(user, "plan", None), "features", {}) or {}
+                    if isinstance(plan_features, str):
+                        plan_features = json.loads(plan_features)
+                    quota = int(plan_features.get(feature_key, quota))
+                except Exception:
+                    quota = 0
 
             used = _inc_r(str(user.id), feature_key)
             if used < 0:
