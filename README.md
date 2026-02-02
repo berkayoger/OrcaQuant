@@ -46,7 +46,8 @@ Monorepo sade ve izlenebilir bir yapı izler:
 .
 ├─ .github/               # CI/CD ve güvenlik iş akışları
 ├─ backend/               # Flask API, iş mantığı, servisler
-├─ frontend/              # Basit HTML/JS arayüz (MPA)
+├─ frontend/              # **Kanonic** HTML/JS arayüz (MPA)
+├─ archive/               # Arşivlenmiş frontend alternatifleri
 ├─ deploy/
 │  └─ k8s/                # Kubernetes örnek manifestleri
 ├─ migrations/            # Flask-Migrate veritabanı değişiklikleri
@@ -60,6 +61,11 @@ Monorepo sade ve izlenebilir bir yapı izler:
 ```
 
 > Not: Depodaki bazı yardımcı klasörler (örn. `infra/`, `docs/`, `storage/`) operasyonel araçlar ve örnek veriler içerir.
+
+### Frontend Konumu (Kanonic ve Arşiv)
+- **Kanonic frontend:** `frontend/` dizini (README ve `backend/frontend/__init__.py` tarafından referans alınır).
+- **Arşivlenmiş frontendler:** `archive/` altında tutulur (`archive/frontend-react`, `archive/frontend-spa`, `archive/frontend_spa`, `archive/frontend-mvp-v2`).
+  - Bu dizinler bakımda değildir; yalnızca referans/karşılaştırma için saklanır.
 
 ---
 
