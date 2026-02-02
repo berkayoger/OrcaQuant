@@ -1,12 +1,13 @@
 # backend/utils/usage_limits.py
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timedelta
 from functools import wraps
 from types import SimpleNamespace
 from typing import Callable, Dict, Optional
 
-from flask import current_app, g, jsonify
+from flask import current_app, g, jsonify, request
 
 from backend.utils.plan_limits import get_user_effective_limits
 
