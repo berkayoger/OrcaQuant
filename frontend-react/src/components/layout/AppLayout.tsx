@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
+import { ToastCenter } from '@/components/ToastCenter';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -25,6 +26,7 @@ export const AppLayout = ({ children }: AppLayoutProps): JSX.Element => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
+      <ToastCenter />
       <header className="border-b border-slate-800/60 bg-slate-950/80 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <NavLink to="/" className="text-lg font-bold text-white">

@@ -14,7 +14,8 @@ limits_bp = Blueprint("limits", __name__, url_prefix="/api/limits")
 @require_csrf
 def get_limit_status():
     user = g.user
-    features = user.plan.features
+    plan = getattr(user, "plan", None)
+    features = getattr(plan, "features", {})
     if isinstance(features, str):
         try:
             features = json.loads(features)
@@ -31,6 +32,13 @@ def get_limit_status():
             "used": used,
             "remaining": remaining,
             "percent_used": percent,
+            "warn_75": percent >= 75,
+            "warn_90": percent >= 90,
+            "exhausted": remaining <= 0,
         }
 
-    return jsonify({"limits": result})
+    payload = {
+        "plan": getattr(plan, "name", None),
+        "limits": result,
+    }
+    return jsonify(payload)

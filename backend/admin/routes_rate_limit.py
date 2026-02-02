@@ -5,26 +5,25 @@ import ipaddress
 from flask import Blueprint, g, jsonify, request
 
 from backend.extensions import redis_client
-from backend.models import db
+from backend.models import User, UserRole, db
 from backend.models.api_key import APIKey
+from backend.utils.rbac import require_roles
 
 admin_bp = Blueprint("admin_rl", __name__, url_prefix="/admin")
 
 
-def admin_required(fn):
-    """Placeholder admin check; replace with real RBAC."""
-
-    def wrapper(*args, **kwargs):
-        if not getattr(g, "user_id", None):
-            return jsonify({"error": "auth required"}), 401
-        return fn(*args, **kwargs)
-
-    wrapper.__name__ = fn.__name__
-    return wrapper
+@admin_bp.before_request
+def _load_admin_user():
+    if getattr(g, "user", None):
+        return
+    if getattr(g, "user_id", None):
+        user = User.query.get(g.user_id)
+        if user:
+            g.user = user
 
 
 @admin_bp.get("/rate-limits/stats")
-@admin_required
+@require_roles({UserRole.ADMIN, UserRole.SYSTEM_ADMIN})
 def stats():
     if not redis_client:
         return jsonify({"redis": "down"}), 500
@@ -33,14 +32,14 @@ def stats():
 
 
 @admin_bp.get("/api-keys")
-@admin_required
+@require_roles({UserRole.ADMIN, UserRole.SYSTEM_ADMIN})
 def list_keys():
     keys = APIKey.query.filter_by(user_id=g.user_id).all()
     return jsonify({"api_keys": [k.to_dict() for k in keys]})
 
 
 @admin_bp.post("/api-keys")
-@admin_required
+@require_roles({UserRole.ADMIN, UserRole.SYSTEM_ADMIN})
 def create_key():
     from backend.auth.api_keys import APIKeyManager
 
@@ -54,7 +53,7 @@ def create_key():
 
 
 @admin_bp.delete("/api-keys/<int:key_id>")
-@admin_required
+@require_roles({UserRole.ADMIN, UserRole.SYSTEM_ADMIN})
 def delete_key(key_id: int):
     rec = APIKey.query.filter_by(id=key_id, user_id=g.user_id).first()
     if not rec:
@@ -65,7 +64,7 @@ def delete_key(key_id: int):
 
 
 @admin_bp.post("/rate-limits/unban-ip")
-@admin_required
+@require_roles({UserRole.ADMIN, UserRole.SYSTEM_ADMIN})
 def unban_ip():
     ip = (request.get_json() or {}).get("ip")
     try:

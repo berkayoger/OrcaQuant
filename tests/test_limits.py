@@ -1,4 +1,5 @@
 import json
+from datetime import date
 
 import pytest
 from flask import g, jsonify
@@ -8,6 +9,7 @@ from backend.db.models import SubscriptionPlan, User, UserRole
 from backend.middleware.plan_limits import enforce_plan_limit
 from backend.models.plan import Plan
 from backend.utils.limits import enforce_limit
+from backend.db.models import DailyUsage
 
 
 @pytest.fixture
@@ -68,7 +70,7 @@ def test_enforce_plan_limit_decorator_behavior(test_app, test_user):
         with app.app_context():
             user = db.session.merge(test_user)
             g.user = user
-            response = client.post("/test-decorated")
+            response = client.post("/test-decorated", headers={"X-API-KEY": user.api_key})
             assert response.status_code == 200
 
 
@@ -80,6 +82,10 @@ def test_enforce_plan_limit_blocked_usage(test_app, test_user):
         user = db.session.merge(test_user)
         user.plan.features = json.dumps({"predict_daily": 3})
         db.session.commit()
+        db.session.add(
+            DailyUsage(user_id=user.id, feature_key="predict_daily", usage_date=date.today(), used_count=3)
+        )
+        db.session.commit()
 
     @app.route("/test-decorated-block", methods=["POST"])
     @enforce_plan_limit("predict_daily")
@@ -90,13 +96,10 @@ def test_enforce_plan_limit_blocked_usage(test_app, test_user):
         with app.app_context():
             user = db.session.merge(test_user)
             g.user = user
-            from unittest.mock import patch
-
-            with patch.object(User, "get_usage_count", return_value=3):
-                response = client.post("/test-decorated-block")
-                assert response.status_code == 429
-                data = response.get_json()
-                assert "aşıldı" in data.get("error", "")
+            response = client.post("/test-decorated-block", headers={"X-API-KEY": user.api_key})
+            assert response.status_code == 429
+            data = response.get_json()
+            assert "aşıldı" in (data.get("error") or "")
 
 
 def test_enforce_plan_limit_admin_bypass(test_app, test_user):
@@ -116,7 +119,7 @@ def test_enforce_plan_limit_admin_bypass(test_app, test_user):
             from unittest.mock import patch
 
             with patch.object(User, "get_usage_count", return_value=999):
-                response = client.post("/admin-bypass")
+                response = client.post("/admin-bypass", headers={"X-API-KEY": user.api_key})
                 assert response.status_code == 200
 
 

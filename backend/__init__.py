@@ -22,6 +22,7 @@ from .utils.error_handlers import register_error_handlers as register_enhanced_e
 from .utils.cache import init_l1_cache_from_config
 from .utils.audit import bind_auto_audit
 from .api.swagger import init_swagger
+from .observability.metrics import register_metrics
 from .realtime import init_realtime
 from .db import db as db
 
@@ -39,6 +40,11 @@ try:
     HAS_FLASK_CACHING = True
 except ImportError:
     HAS_FLASK_CACHING = False
+    class Cache:  # type: ignore
+        """Lightweight stub when Flask-Caching is not installed."""
+
+        def __init__(self, *_, **__):
+            self.config = {}
 
 try:
     from flask_restx import Api, Namespace, Resource
@@ -404,6 +410,11 @@ def create_app(config_name: str = None) -> Flask:
 
     # Register blueprints
     register_blueprints(app)
+
+    try:
+        register_metrics(app)
+    except Exception as exc:
+        logger.warning(f"Metrics blueprint not registered: {exc}")
 
     # Ensure versioned aliases exist for legacy routes
     _ensure_api_version_aliases(app)
@@ -772,10 +783,26 @@ def register_blueprints(app: Flask):
             app.register_blueprint(api_bp, url_prefix='/api')
         except Exception:
             pass
+
+    # Health and readiness probes
+    try:
+        from .health import bp as health_bp
+
+        app.register_blueprint(health_bp)
+    except Exception as exc:
+        logger.warning(f"Health blueprint not registered: {exc}")
     
     # Auth Blueprint
     from .auth import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/auth')
+
+    # Usage/plan limits API
+    try:
+        from .limits.routes import limits_bp
+
+        app.register_blueprint(limits_bp)
+    except Exception as exc:
+        logger.warning(f"Limits blueprint not registered: {exc}")
     
     # Admin Panel Blueprint (non-API UI, optional)
     try:

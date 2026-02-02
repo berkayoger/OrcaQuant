@@ -13,3 +13,4 @@ redis==5.0.8
 marshmallow==3.21.1
 werkzeug>=3.0.0
 types-requests; python_version>="3.9"
+cachetools>=5.3.3
