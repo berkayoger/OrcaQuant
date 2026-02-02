@@ -2,14 +2,16 @@
 
 # Environment variables
 .env
-.env.local
-.env.production
 .env.*
 !.env.example
 !.env.production.example
+.env.local
+.env.production
+
 backend/.env
 backend/.env.*
 !backend/.env.example
+
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
@@ -19,22 +21,35 @@ frontend/.env.*
 *.pem
 *.cert
 secrets*.json
+
+# Logs
 logs/
-sbom.json
-sbom-*.json
-pip-audit-*.json
+pytest.log
+.pytest.log
+.pytest_fail.log
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *.egg-info/
 
+# Virtual environments
+.venv/
+venv/
+ENV/
+
 # Frontend dependencies
 node_modules/
 frontend/package-lock.json
 
-# Test coverage
+# Build outputs
+dist/
+build/
+
+# Test coverage and cache
 .coverage
+htmlcov/
+.pytest_cache/
 
 # Temporary test files
 tests/test_draks_api.py
@@ -45,58 +60,17 @@ tests/test_draks_api.py
 
 # Database
 *.db
-dist/
+dump.rdb
+
+# OS files
 .DS_Store
 
-# dotenv
-.env
-.env.*
-!.env.example
-backend/.env
-backend/.env.*
-!backend/.env.example
-frontend/.env
-frontend/.env.*
-!frontend/.env.example
-
-# dotenv (NEVER COMMIT)
-.env
-.env.*
-!.env.example
-backend/.env
-backend/.env.*
-!backend/.env.example
-frontend/.env
-frontend/.env.*
-!frontend/.env.example
-.env
+# Misc
 orcaquant.git/
-.venv/
-venv/
 instance/
-.env
-__pycache__/
 *.backup
-=1.26.0
-=2.1.0
 wsgi.py.backup
 migrate_security_backup.py
-.venv/
-venv/
-instance/
-.env
-__pycache__/
-*.backup
-=1.26.0
-=2.1.0
-wsgi.py.backup
-.venv/
-venv/
-instance/
-.env
-__pycache__/
-*.backup
-=1.26.0
-=2.1.0
-wsgi.py.backup
-migrate_security_backup.py
+sbom.json
+sbom-*.json
+pip-audit-*.json
