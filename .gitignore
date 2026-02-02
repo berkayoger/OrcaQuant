@@ -74,3 +74,25 @@ migrate_security_backup.py
 sbom.json
 sbom-*.json
 pip-audit-*.json
+
+# BEGIN ORCAQUANT MANAGED CLEANUP
+# This block is managed by scripts/cleanup_repo.sh. Do not edit by hand.
+dist/
+build/
+node_modules/
+__pycache__/
+.pytest_cache/
+htmlcov/
+logs/
+.coverage
+pytest.log
+.pytest.log
+.pytest_fail.log
+*.py[cod]
+*.egg-info/
+*.db
+dump.rdb
+sbom.json
+sbom-*.json
+pip-audit-*.json
+# END ORCAQUANT MANAGED CLEANUP
