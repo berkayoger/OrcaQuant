@@ -2,6 +2,8 @@ name: Staging
 on:
   push:
     branches: [develop, staging]
+  pull_request:
+    branches: [develop, staging]
 
 jobs:
   build_frontend:
