@@ -1,3 +1,16 @@
+# --- OrcaQuant prod hijyen ---
+# ML cache / runtime artifacts repoya girmesin
+storage/ml_cache/
+
+# Local patches repoda durmasın
+*.patch
+
+# Python / Node klasikler (varsa çakışmaz)
+__pycache__/
+.pytest_cache/
+node_modules/
+.env
+
 ## Security: never commit secrets / private keys / local logs
 
 # Environment variables
