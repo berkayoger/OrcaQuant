@@ -92,7 +92,7 @@ Yerel Python ortamıyla geliştirme:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt -r backend/requirements.txt -r requirements-ml.txt -r requirements-dev.txt
 cp .env.example .env    # anahtarları doldurun
 
 # DB hazırla (ilk kurulum)
