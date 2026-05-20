@@ -14,3 +14,6 @@ marshmallow==3.21.1
 werkzeug>=3.0.0
 types-requests; python_version>="3.9"
 cachetools>=5.3.3
+numpy>=2.0,<3.0
+pandas>=2.2,<3.0
+bleach>=6.1,<7.0
